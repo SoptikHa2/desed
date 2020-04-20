@@ -35,7 +35,7 @@ impl Tui {
         Ok(Tui {
             debugger,
             terminal,
-            forced_refresh_rate: 20,
+            forced_refresh_rate: 100,
         })
     }
 
