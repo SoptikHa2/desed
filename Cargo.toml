@@ -1,9 +1,20 @@
 [package]
 name = "desed"
+description = "Sed script debugger. Debug and demystify your sed scripts with TUI debugger."
+repository = "https://github.com/SoptikHa2/desed"
+readme = "README.md"
+license-file = "LICENSE"
+keywords = ["awk", "debugger", "debugging", "tui"]
 version = "0.1.0"
 authors = ["Petr Šťastný <petr.stastny01@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Parsing CLI arguments
+clap = "2.33.0"
+# Syntax highlighting, use regex engine written in Rust
+syntect = { version = "4.1.0", default-features = false, features = ["default-fancy"] }
+# TUI
+crossterm = "0.17.3"
+tui = {  version = "0.9.1", default-features = false, features = ["crossterm"] }
