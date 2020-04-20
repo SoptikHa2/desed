@@ -1,6 +1,10 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::UiAgent;
+use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use std::io;
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
 use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
@@ -18,7 +22,7 @@ pub struct Tui {
     /// This is in milliseconds. For example value of 100
     /// means that the application is refreshed at least once every
     /// 100 milliseconds.
-    forced_refresh_rate: usize,
+    forced_refresh_rate: u64,
 }
 impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
@@ -179,13 +183,74 @@ impl Tui {
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
         let currentState = self.debugger._mock_state().unwrap();
-        let mut breakpoints: Vec<usize> = vec![1, 3];
+        let mut breakpoints: Vec<usize> = Vec::new();
+
+        // Setup event loop and input handling
+        let (tx, rx) = mpsc::channel();
+        let tick_rate = Duration::from_millis(self.forced_refresh_rate);
+
+        // Thread that will send interrupt singals to UI thread (this one)
+        thread::spawn(move || {
+            let mut last_tick = Instant::now();
+            loop {
+                // Oh we got an event from user
+                if event::poll(tick_rate - last_tick.elapsed()).unwrap() {
+                    // Send interrupt
+                    if let Event::Key(key) = event::read().unwrap() {
+                        tx.send(Interrupt::UserEvent(key));
+                    }
+                }
+                if (last_tick.elapsed() > tick_rate) {
+                    tx.send(Interrupt::IntervalElapsed).unwrap();
+                    last_tick = Instant::now();
+                }
+            }
+        });
+
+        self.terminal.clear();
+
+        // UI thread that manages drawing
         loop {
             let debugger = &self.debugger;
             let line_number = currentState.current_line;
+            // Wait for interrupt
+            match rx.recv().unwrap() {
+                // Handle user input. Vi-like controls are available,
+                // including prefixing a command with number to execute it
+                // multiple times (in case of breakpoint toggles breakpoint on given line).
+                // TODO: Add vi-like number command prefixing
+                Interrupt::UserEvent(event) => match event.code {
+                    // Move cursor down
+                    KeyCode::Char('j') | KeyCode::Down => {}
+                    // Move cursor up
+                    KeyCode::Char('k') | KeyCode::Up => {}
+                    // Go to top of file
+                    KeyCode::Char('g') => {}
+                    // Go to bottom of file
+                    KeyCode::Char('G') => {}
+                    // Toggle breakpoint on current line
+                    KeyCode::Char('b') => {}
+                    // Step forward
+                    KeyCode::Char('s') => {}
+                    // Step backwards
+                    KeyCode::Char('a') => {}
+                    // Run till end or breakpoint
+                    KeyCode::Char('r') => {}
+                    // TODO: handle other keycodes (particulary numbers)
+                    other => {}
+                },
+                Interrupt::IntervalElapsed => {}
+            }
+            // Draw
             self.terminal.draw(|mut f| {
                 Tui::draw(&mut f, debugger, &currentState, &breakpoints, line_number)
             });
         }
     }
+}
+
+/// Why did we wake up drawing thread?
+enum Interrupt {
+    UserEvent(KeyEvent),
+    IntervalElapsed,
 }
