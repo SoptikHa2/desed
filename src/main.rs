@@ -1,5 +1,5 @@
-mod sed_interface;
-use sed_interface::debugger;
+mod sed;
+use sed::debugger::Debugger;
 
 fn main() {
     println!("Hello, world!");
