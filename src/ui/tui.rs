@@ -28,7 +28,8 @@ impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
         let stdout = io::stdout();
         let backend = CrosstermBackend::new(stdout);
-        let terminal = Terminal::new(backend).unwrap();
+        let mut terminal = Terminal::new(backend).unwrap();
+        crossterm::terminal::enable_raw_mode();
         Ok(Tui {
             debugger,
             terminal,
@@ -200,7 +201,7 @@ impl UiAgent for Tui {
                         tx.send(Interrupt::UserEvent(key));
                     }
                 }
-                if (last_tick.elapsed() > tick_rate) {
+                if last_tick.elapsed() > tick_rate {
                     tx.send(Interrupt::IntervalElapsed).unwrap();
                     last_tick = Instant::now();
                 }
@@ -220,6 +221,10 @@ impl UiAgent for Tui {
                 // multiple times (in case of breakpoint toggles breakpoint on given line).
                 // TODO: Add vi-like number command prefixing
                 Interrupt::UserEvent(event) => match event.code {
+                    // Exit
+                    KeyCode::Char('q') => {
+                        return Ok(());
+                    }
                     // Move cursor down
                     KeyCode::Char('j') | KeyCode::Down => {}
                     // Move cursor up
@@ -237,6 +242,7 @@ impl UiAgent for Tui {
                     // Run till end or breakpoint
                     KeyCode::Char('r') => {}
                     // TODO: handle other keycodes (particulary numbers)
+                    // TODO: Handle <Ctrl-C> signal
                     other => {}
                 },
                 Interrupt::IntervalElapsed => {}
