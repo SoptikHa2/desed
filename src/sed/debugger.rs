@@ -1,6 +1,5 @@
 use crate::cli::Options;
 use crate::sed::communication::SedCommunicator;
-use std::collections::VecDeque;
 
 /// Sed program debugger.
 ///
@@ -20,12 +19,17 @@ pub struct Debugger {
     ///
     /// See `history_limit` for maximum debugging states stored.
     /// We rotate them afterwards.
-    state_frames: VecDeque<DebuggingState>,
+    state_frames: Vec<DebuggingState>,
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.
     pub fn new(settings: Options) -> Result<Self, String> {
-        unimplemented!();
+        let mut communicator = SedCommunicator::new(settings);
+        let data = communicator.getExecutionInfoFromSed()?;
+        Ok(Debugger {
+            source_code: data.program_source,
+            state_frames: data.states,
+        })
     }
     /// Create new instance of debugger with mock data.
     /// Useful for UI testing.
@@ -37,7 +41,7 @@ impl Debugger {
                 .iter()
                 .map(|s| String::from(*s))
                 .collect(),
-            state_frames: VecDeque::new(),
+            state_frames: Vec::new(),
         })
     }
     /// Create new instance of debugging state with mock data.
@@ -53,6 +57,8 @@ impl Debugger {
                 .map(|s: &&str| String::from(*s))
                 .collect(),
             current_line: 2,
+            output: None,
+            sed_command: Some(String::from("source")),
         })
     }
     /// Go to next sed execution step.
@@ -82,8 +88,13 @@ pub struct DebuggingState {
     /// wil be saved here. If the previously executed instruction was not a substitution,
     /// this will be empty.
     pub matched_regex_registers: Vec<String>,
+    pub output: Option<String>,
     /// References current instruction in source code. This is computed heuristically
     /// and is not retrieved from inner sed state. So this might in some cases be wrong.
     /// If that's the case, file a bug.
     pub current_line: usize,
+    /// Command executed by sed. With a bit of luck, this should match command referenced
+    /// by current_line. If these two don't match, this one (`sed_command`) is right and
+    /// a bug in parsing code occured.
+    pub sed_command: Option<String>,
 }
