@@ -21,21 +21,6 @@ pub struct Debugger {
     /// See `history_limit` for maximum debugging states stored.
     /// We rotate them afterwards.
     state_frames: VecDeque<DebuggingState>,
-    /// Maximum limit of debugging states saved.
-    ///
-    /// As we want the option to traverse program execution state
-    /// back and forth, we save the debugging states to memory.
-    ///
-    /// However, with extremely (and likely maliciously crafted - when
-    /// did you last needed *that* large sed program) large sed programs,
-    /// this might occupy too much memory - especially since we actually
-    /// store new copy of the pattern and hold buffer each step.
-    ///
-    /// If this is set, there will be a limit to maximum of state frames that
-    /// will be saved into memory.
-    ///
-    /// This will never be zero. If it is, debugger will panic.
-    history_limit: Option<usize>,
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.
@@ -53,7 +38,6 @@ impl Debugger {
                 .map(|s| String::from(*s))
                 .collect(),
             state_frames: VecDeque::new(),
-            history_limit: Some(1000),
         })
     }
     /// Create new instance of debugging state with mock data.

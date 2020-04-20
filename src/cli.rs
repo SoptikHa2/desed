@@ -7,12 +7,6 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
         .version(crate_version!())
         .author("Petr Šťastný <petr.stastny01@gmail.com>")
         .about("Sed script debugger. Debug and demystify your sed scripts with TUI debugger.")
-        .arg(Arg::with_name("history-limit")
-            .long("history-limit")
-            .takes_value(true)
-            .default_value("1000")
-            .required(false)
-            .help("Desed by default saves execution state history, allowing you to step backwards. However this might cause problems with extremely long files. This option limits maximum number of sed execution states helt in memory. Set to 0 to allow unlimited usage."))
         .arg(Arg::with_name("sed_n")
             .short("n")
             .long("quiet")
@@ -53,27 +47,12 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
 
 #[derive(Debug)]
 pub struct Options {
-    pub history_limit: Option<usize>,
     pub sed_script: PathBuf,
     pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
-        let history_limit: Option<usize> = match matches.value_of("history-limit") {
-            None => None,
-            Some(x) => {
-                if let Ok(num) = x.parse::<usize>() {
-                    match num {
-                        0 => None,
-                        _ => Some(num),
-                    }
-                } else {
-                    None
-                }
-            }
-        };
-
         let sed_script: PathBuf = match PathBuf::from_str(matches.value_of("sed-script").unwrap()) {
             Ok(x) => x,
             Err(_) => return Err(String::from("Failed to load sed script path.")),
@@ -100,7 +79,6 @@ impl Options {
         }
 
         Ok(Options {
-            history_limit,
             sed_script,
             input_file,
             sed_parameters,
