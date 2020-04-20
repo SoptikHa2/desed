@@ -1,7 +1,8 @@
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::path::PathBuf;
+use std::str::FromStr;
 
-pub fn construct_app<'a, 'b>() -> Result<Options, String> {
+pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
     let matches = App::new("Desed")
         .version(crate_version!())
         .author("Petr Šťastný <petr.stastny01@gmail.com>")
@@ -10,19 +11,43 @@ pub fn construct_app<'a, 'b>() -> Result<Options, String> {
             .long("history-limit")
             .takes_value(true)
             .default_value("1000")
+            .required(false)
             .help("Desed by default saves execution state history, allowing you to step backwards. However this might cause problems with extremely long files. This option limits maximum number of sed execution states helt in memory. Set to 0 to allow unlimited usage."))
+        .arg(Arg::with_name("sed_n")
+            .short("n")
+            .long("quiet")
+            .long("silent")
+            .help("sed: suppress automatic printing of pattern space")
+            .takes_value(false)
+            .required(false))
+        .arg(Arg::with_name("sed_E")
+            .short("E")
+            .long("regexp-extended")
+            .help("sed: use extended regular epxressions in the script")
+            .takes_value(false)
+            .required(false))
+        .arg(Arg::with_name("sed_sandbox")
+            .long("sandbox")
+            .help("sed: operate in sandbox mode (disable e/r/w commands).")
+            .takes_value(false)
+            .required(false))
+        .arg(Arg::with_name("sed_z")
+            .long("null-data")
+            .short("z")
+            .help("sed: separate lines by NUL characters")
+            .takes_value(false)
+            .required(false))
         .arg(Arg::with_name("sed-script")
             .help("Input file with sed script")
             .required(true)
             .multiple(false)
             .index(1))
         .arg(Arg::with_name("input-file")
-            .help("File with data for sed to process. Use '-' to read from stdin instead.")
+            .help("File with data for sed to process.")
             .required(true)
             .index(2))
-        .arg(Arg::with_name("sed-parameters")
-            .help("Parameters to be passed to sed. Following options are ignored: -e, -f, -i, --help, --version")
-            .index(3)).get_matches();
+        .after_help("EXAMPLE:\n\n\tdesed increment-number.sed test-suite.txt\n\t\tRuns script stored in increment-number.sed with input in test-suite.txt\n\n\tdesed print-matching.sed test-cases.txt -nE\n\t\tRuns script in .sed file with input in .txt file and parameters -n -E to launched sed")
+        .get_matches();
     Options::from_matches(matches)
 }
 
@@ -30,11 +55,55 @@ pub fn construct_app<'a, 'b>() -> Result<Options, String> {
 pub struct Options {
     pub history_limit: Option<usize>,
     pub sed_script: PathBuf,
-    pub input_file: Option<PathBuf>,
+    pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
-        Err(String::from("Not implemented"))
+        let history_limit: Option<usize> = match matches.value_of("history-limit") {
+            None => None,
+            Some(x) => {
+                if let Ok(num) = x.parse::<usize>() {
+                    match num {
+                        0 => None,
+                        _ => Some(num),
+                    }
+                } else {
+                    None
+                }
+            }
+        };
+
+        let sed_script: PathBuf = match PathBuf::from_str(matches.value_of("sed-script").unwrap()) {
+            Ok(x) => x,
+            Err(_) => return Err(String::from("Failed to load sed script path.")),
+        };
+
+        let input_file: PathBuf = match PathBuf::from_str(matches.value_of("input-file").unwrap()) {
+            Ok(x) => x,
+            Err(_) => return Err(String::from("Failed to load input file path.")),
+        };
+
+        let mut sed_parameters: Vec<String> = Vec::with_capacity(4);
+
+        if matches.is_present("sed_n") {
+            sed_parameters.push(String::from("-n"));
+        }
+        if matches.is_present("sed_E") {
+            sed_parameters.push(String::from("-E"));
+        }
+        if matches.is_present("sed_sandbox") {
+            sed_parameters.push(String::from("--sandbox"));
+        }
+        if matches.is_present("sed_z") {
+            sed_parameters.push(String::from("-z"));
+        }
+
+        Ok(Options {
+            history_limit,
+            sed_script,
+            input_file,
+            sed_parameters,
+        })
     }
 }

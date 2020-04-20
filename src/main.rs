@@ -4,6 +4,12 @@ mod cli;
 mod ui;
 
 fn main() {
-    let options = cli::construct_app();
-    println!("{:?}", options);
+    let settings = cli::parse_arguments();
+    if let Ok(settings) = settings {
+    } else {
+        eprintln!(
+            "An error occured while parsing arguments: {}",
+            settings.unwrap_err()
+        );
+    }
 }
