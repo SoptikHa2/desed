@@ -13,7 +13,7 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let settings = cli::parse_arguments()?;
-    let debugger = Debugger::_mock(settings)?;
+    let debugger = Debugger::new(settings)?;
     let tui = Tui::new(debugger)?;
     tui.start()
 }

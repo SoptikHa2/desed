@@ -202,7 +202,9 @@ impl Tui {
 
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
-        let currentState = self.debugger._mock_state().unwrap();
+        let mut current_state = self.debugger.next_state().ok_or(String::from(
+            "It looks like the source code loaded was empty. Nothing to do.",
+        ))?;
 
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
@@ -216,7 +218,7 @@ impl UiAgent for Tui {
                 if event::poll(tick_rate - last_tick.elapsed()).unwrap() {
                     // Send interrupt
                     if let Event::Key(key) = event::read().unwrap() {
-                        tx.send(Interrupt::UserEvent(key));
+                        tx.send(Interrupt::UserEvent(key)).unwrap();
                     }
                 }
                 if last_tick.elapsed() > tick_rate {
@@ -231,7 +233,7 @@ impl UiAgent for Tui {
         // UI thread that manages drawing
         loop {
             let debugger = &self.debugger;
-            let line_number = currentState.current_line;
+            let line_number = current_state.current_line;
             // Wait for interrupt
             match rx.recv().unwrap() {
                 // Handle user input. Vi-like controls are available,
@@ -274,13 +276,29 @@ impl UiAgent for Tui {
                         }
                     }
                     // Step forward
-                    KeyCode::Char('s') => {}
+                    KeyCode::Char('s') => {
+                        if let Some(newstate) = self.debugger.next_state() {
+                            current_state = newstate;
+                        }
+                    }
                     // Step backwards
-                    KeyCode::Char('a') => {}
+                    KeyCode::Char('a') => {
+                        if let Some(prevstate) = self.debugger.previous_state() {
+                            current_state = prevstate;
+                        }
+                    }
                     // Run till end or breakpoint
-                    KeyCode::Char('r') => {}
+                    KeyCode::Char('r') => loop {
+                        let mut newstate = self.debugger.next_state();
+                        if let Some(newstate) = newstate {
+                            if self.breakpoints.contains(&newstate.current_line) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    },
                     // TODO: handle other keycodes (particulary numbers)
-                    // TODO: Handle <Ctrl-C> signal
                     other => {}
                 },
                 Interrupt::IntervalElapsed => {}
@@ -289,7 +307,8 @@ impl UiAgent for Tui {
             let bp = &self.breakpoints;
             let c = self.cursor;
             self.terminal
-                .draw(|mut f| Tui::draw(&mut f, debugger, &currentState, &bp, c, line_number, c));
+                .draw(|mut f| Tui::draw(&mut f, debugger, &current_state, &bp, c, line_number, c))
+                .unwrap();
         }
     }
 }
