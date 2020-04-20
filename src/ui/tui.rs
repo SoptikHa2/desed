@@ -32,7 +32,14 @@ impl Tui {
         })
     }
 
-    fn draw<B: Backend>(f: &mut Frame<B>, debugger: &Debugger, state: &DebuggingState) {
+    /// Generate layout and call individual draw methods for each layout part.
+    fn draw<B: Backend>(
+        f: &mut Frame<B>,
+        debugger: &Debugger,
+        state: &DebuggingState,
+        breakpoints: &Vec<usize>,
+        focused_line: usize,
+    ) {
         let total_size = f.size();
 
         if let [left_plane, right_plane] = Layout::default()
@@ -52,7 +59,13 @@ impl Tui {
                 )
                 .split(right_plane)[0..3]
             {
-                Tui::draw_source_code(f, &debugger.source_code, left_plane);
+                Tui::draw_source_code(
+                    f,
+                    &debugger.source_code,
+                    breakpoints,
+                    focused_line,
+                    left_plane,
+                );
                 Tui::draw_text(
                     f,
                     String::from(" Pattern space "),
@@ -74,7 +87,18 @@ impl Tui {
         }
     }
 
-    fn draw_source_code<B: Backend>(f: &mut Frame<B>, source_code: &Vec<String>, area: Rect) {
+    /// Draw source code into main window.
+    ///
+    /// Handles scrolling and breakpoint display as well.
+    ///
+    /// TODO: syntax highlighting
+    fn draw_source_code<B: Backend>(
+        f: &mut Frame<B>,
+        source_code: &Vec<String>,
+        breakpoints: &Vec<usize>,
+        focused_line: usize,
+        area: Rect,
+    ) {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
@@ -83,9 +107,19 @@ impl Tui {
         // TODO: Implement scrolling
         for number in 0..source_code.len() {
             // TODO: Proper padding
+            let linenr_color = if breakpoints.contains(&(number + 1)) {
+                Color::LightRed
+            } else {
+                Color::Yellow
+            };
+            let linenr_bg_color = if number == focused_line {
+                Color::DarkGray
+            } else {
+                Color::Reset
+            };
             text_output.push(Text::styled(
                 format!("{: <4}", (number + 1)),
-                Style::default().fg(Color::Yellow),
+                Style::default().fg(linenr_color).bg(linenr_bg_color),
             ));
             text_output.push(Text::raw(source_code.get(number).unwrap()));
             text_output.push(Text::raw("\n"));
@@ -96,6 +130,8 @@ impl Tui {
         f.render_widget(paragraph, area);
     }
 
+    /// Draw regex. This either prints "No matches" in dark gray, italics if there are no matches,
+    /// or prints all the matches with their capture group number beforehand.
     fn draw_regex_space<B: Backend>(f: &mut Frame<B>, regex_space: &Vec<String>, area: Rect) {
         let block_regex_space = Block::default()
             .title(" Regex matches ")
@@ -123,6 +159,7 @@ impl Tui {
         f.render_widget(paragraph, area);
     }
 
+    /// Draw simple text in area, wrapping, with light blue fg color. Do nothing else.
     fn draw_text<B: Backend>(
         f: &mut Frame<B>,
         heading: String,
@@ -142,10 +179,13 @@ impl Tui {
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
         let currentState = self.debugger._mock_state().unwrap();
+        let mut breakpoints: Vec<usize> = vec![1, 3];
         loop {
             let debugger = &self.debugger;
-            self.terminal
-                .draw(|mut f| Tui::draw(&mut f, debugger, &currentState));
+            let line_number = currentState.current_line;
+            self.terminal.draw(|mut f| {
+                Tui::draw(&mut f, debugger, &currentState, &breakpoints, line_number)
+            });
         }
     }
 }

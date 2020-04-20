@@ -68,7 +68,7 @@ impl Debugger {
                 .iter()
                 .map(|s: &&str| String::from(*s))
                 .collect(),
-            current_line: 4,
+            current_line: 2,
         })
     }
     /// Go to next sed execution step.

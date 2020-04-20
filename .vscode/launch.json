@@ -19,7 +19,10 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "test.sed",
+                "input.txt"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {
