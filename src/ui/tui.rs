@@ -16,6 +16,8 @@ use tui::Terminal;
 pub struct Tui {
     debugger: Debugger,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    breakpoints: HashSet<usize>,
+    cursor: usize,
     /// UI is refreshed automatically on user input.
     /// However if no user input arrives, how often should
     /// application redraw itself anyway?
@@ -35,6 +37,8 @@ impl Tui {
         Ok(Tui {
             debugger,
             terminal,
+            breakpoints: HashSet::new(),
+            cursor: 0,
             forced_refresh_rate: 100,
         })
     }
@@ -45,7 +49,11 @@ impl Tui {
         debugger: &Debugger,
         state: &DebuggingState,
         breakpoints: &HashSet<usize>,
+        // Line (0-based) which user has selected via cursor
         cursor: usize,
+        // Line (0-based) which sed interpreter currently executes
+        interpreter_line: usize,
+        // Line (0-based) which should be approximately at the center of the screen
         focused_line: usize,
     ) {
         let total_size = f.size();
@@ -73,6 +81,7 @@ impl Tui {
                     breakpoints,
                     focused_line,
                     cursor,
+                    interpreter_line,
                     left_plane,
                 );
                 Tui::draw_text(
@@ -107,6 +116,7 @@ impl Tui {
         breakpoints: &HashSet<usize>,
         focused_line: usize,
         cursor: usize,
+        interpreter_line: usize,
         area: Rect,
     ) {
         let block_source_code = Block::default()
@@ -126,7 +136,7 @@ impl Tui {
             } else {
                 Color::Reset
             };
-            let linenr_format = if number == focused_line {
+            let linenr_format = if number == interpreter_line {
                 format!("{: <3}▶", (number + 1))
             } else {
                 format!("{: <4}", (number + 1))
@@ -193,8 +203,6 @@ impl Tui {
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
         let currentState = self.debugger._mock_state().unwrap();
-        let mut breakpoints: HashSet<usize> = HashSet::new();
-        let mut cursor: usize = 0;
 
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
@@ -239,30 +247,30 @@ impl UiAgent for Tui {
                     }
                     // Move cursor down
                     KeyCode::Char('j') | KeyCode::Down => {
-                        if cursor < debugger.source_code.len() - 1 {
-                            cursor += 1;
+                        if self.cursor < debugger.source_code.len() - 1 {
+                            self.cursor += 1;
                         }
                     }
                     // Move cursor up
                     KeyCode::Char('k') | KeyCode::Up => {
-                        if cursor > 0 {
-                            cursor -= 1;
+                        if self.cursor > 0 {
+                            self.cursor -= 1;
                         }
                     }
                     // Go to top of file
                     KeyCode::Char('g') => {
-                        cursor = 0;
+                        self.cursor = 0;
                     }
                     // Go to bottom of file
                     KeyCode::Char('G') => {
-                        cursor = debugger.source_code.len() - 1;
+                        self.cursor = debugger.source_code.len() - 1;
                     }
                     // Toggle breakpoint on current line
                     KeyCode::Char('b') => {
-                        if breakpoints.contains(&cursor) {
-                            breakpoints.remove(&cursor);
+                        if self.breakpoints.contains(&self.cursor) {
+                            self.breakpoints.remove(&self.cursor);
                         } else {
-                            breakpoints.insert(cursor);
+                            self.breakpoints.insert(self.cursor);
                         }
                     }
                     // Step forward
@@ -278,16 +286,10 @@ impl UiAgent for Tui {
                 Interrupt::IntervalElapsed => {}
             }
             // Draw
-            self.terminal.draw(|mut f| {
-                Tui::draw(
-                    &mut f,
-                    debugger,
-                    &currentState,
-                    &breakpoints,
-                    cursor,
-                    line_number,
-                )
-            });
+            let bp = &self.breakpoints;
+            let c = self.cursor;
+            self.terminal
+                .draw(|mut f| Tui::draw(&mut f, debugger, &currentState, &bp, c, line_number, c));
         }
     }
 }
