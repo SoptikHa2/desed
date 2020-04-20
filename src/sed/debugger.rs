@@ -16,11 +16,6 @@ pub struct Debugger {
     /// If there were multiple instructions on a single line in original source code,
     /// they are spread out so one is on each line.
     pub source_code: Vec<String>,
-    /// Source code that was highlighted with ANSI codes, one instruction per line.
-    ///
-    /// If there were multiple instructions on a single line in original source code,
-    /// they are spread out so one is on each line.
-    pub highlighted_source_code: Vec<String>,
     /// Previously visited debugging states, inclding the current one.
     ///
     /// See `history_limit` for maximum debugging states stored.
@@ -54,10 +49,6 @@ impl Debugger {
     pub fn _mock(settings: Options) -> Result<Self, String> {
         Ok(Debugger {
             source_code: vec!["source", "code", "example"]
-                .iter()
-                .map(|s| String::from(*s))
-                .collect(),
-            highlighted_source_code: vec!["source", "code", "example"]
                 .iter()
                 .map(|s| String::from(*s))
                 .collect(),
