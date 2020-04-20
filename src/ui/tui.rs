@@ -1,6 +1,7 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::UiAgent;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use std::collections::HashSet;
 use std::io;
 use std::sync::mpsc;
 use std::thread;
@@ -30,6 +31,7 @@ impl Tui {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
         crossterm::terminal::enable_raw_mode();
+        terminal.hide_cursor();
         Ok(Tui {
             debugger,
             terminal,
@@ -42,7 +44,8 @@ impl Tui {
         f: &mut Frame<B>,
         debugger: &Debugger,
         state: &DebuggingState,
-        breakpoints: &Vec<usize>,
+        breakpoints: &HashSet<usize>,
+        cursor: usize,
         focused_line: usize,
     ) {
         let total_size = f.size();
@@ -69,6 +72,7 @@ impl Tui {
                     &debugger.source_code,
                     breakpoints,
                     focused_line,
+                    cursor,
                     left_plane,
                 );
                 Tui::draw_text(
@@ -100,8 +104,9 @@ impl Tui {
     fn draw_source_code<B: Backend>(
         f: &mut Frame<B>,
         source_code: &Vec<String>,
-        breakpoints: &Vec<usize>,
+        breakpoints: &HashSet<usize>,
         focused_line: usize,
+        cursor: usize,
         area: Rect,
     ) {
         let block_source_code = Block::default()
@@ -111,19 +116,23 @@ impl Tui {
         let mut text_output: Vec<Text> = Vec::new();
         // TODO: Implement scrolling
         for number in 0..source_code.len() {
-            // TODO: Proper padding
-            let linenr_color = if breakpoints.contains(&(number + 1)) {
+            let linenr_color = if breakpoints.contains(&number) {
                 Color::LightRed
             } else {
                 Color::Yellow
             };
-            let linenr_bg_color = if number == focused_line {
+            let linenr_bg_color = if number == cursor {
                 Color::DarkGray
             } else {
                 Color::Reset
             };
+            let linenr_format = if number == focused_line {
+                format!("{: <3}▶", (number + 1))
+            } else {
+                format!("{: <4}", (number + 1))
+            };
             text_output.push(Text::styled(
-                format!("{: <4}", (number + 1)),
+                linenr_format,
                 Style::default().fg(linenr_color).bg(linenr_bg_color),
             ));
             text_output.push(Text::raw(source_code.get(number).unwrap()));
@@ -184,7 +193,8 @@ impl Tui {
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
         let currentState = self.debugger._mock_state().unwrap();
-        let mut breakpoints: Vec<usize> = Vec::new();
+        let mut breakpoints: HashSet<usize> = HashSet::new();
+        let mut cursor: usize = 0;
 
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
@@ -223,18 +233,38 @@ impl UiAgent for Tui {
                 Interrupt::UserEvent(event) => match event.code {
                     // Exit
                     KeyCode::Char('q') => {
+                        // Terminal might go crazy if we don't switch the mode back
+                        crossterm::terminal::disable_raw_mode();
                         return Ok(());
                     }
                     // Move cursor down
-                    KeyCode::Char('j') | KeyCode::Down => {}
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        if cursor < debugger.source_code.len() - 1 {
+                            cursor += 1;
+                        }
+                    }
                     // Move cursor up
-                    KeyCode::Char('k') | KeyCode::Up => {}
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                        }
+                    }
                     // Go to top of file
-                    KeyCode::Char('g') => {}
+                    KeyCode::Char('g') => {
+                        cursor = 0;
+                    }
                     // Go to bottom of file
-                    KeyCode::Char('G') => {}
+                    KeyCode::Char('G') => {
+                        cursor = debugger.source_code.len() - 1;
+                    }
                     // Toggle breakpoint on current line
-                    KeyCode::Char('b') => {}
+                    KeyCode::Char('b') => {
+                        if breakpoints.contains(&cursor) {
+                            breakpoints.remove(&cursor);
+                        } else {
+                            breakpoints.insert(cursor);
+                        }
+                    }
                     // Step forward
                     KeyCode::Char('s') => {}
                     // Step backwards
@@ -249,7 +279,14 @@ impl UiAgent for Tui {
             }
             // Draw
             self.terminal.draw(|mut f| {
-                Tui::draw(&mut f, debugger, &currentState, &breakpoints, line_number)
+                Tui::draw(
+                    &mut f,
+                    debugger,
+                    &currentState,
+                    &breakpoints,
+                    cursor,
+                    line_number,
+                )
             });
         }
     }
