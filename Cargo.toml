@@ -13,8 +13,6 @@ edition = "2018"
 [dependencies]
 # Parsing CLI arguments
 clap = "2.33.0"
-# Syntax highlighting, use regex engine written in Rust
-syntect = { version = "4.1.0", default-features = false, features = ["default-fancy"] }
 # TUI
 crossterm = "0.17.3"
 tui = {  version = "0.9.1", default-features = false, features = ["crossterm"] }

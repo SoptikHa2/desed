@@ -1,6 +1,5 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::UiAgent;
-use crate::ui::utilities::SyntaxHighlighter;
 use std::io;
 use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -12,7 +11,6 @@ use tui::Terminal;
 pub struct Tui {
     debugger: Debugger,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
-    highlighter: SyntaxHighlighter,
     /// UI is refreshed automatically on user input.
     /// However if no user input arrives, how often should
     /// application redraw itself anyway?
@@ -30,17 +28,11 @@ impl Tui {
         Ok(Tui {
             debugger,
             terminal,
-            highlighter: SyntaxHighlighter::new(),
             forced_refresh_rate: 20,
         })
     }
 
-    fn draw<B: Backend>(
-        f: &mut Frame<B>,
-        debugger: &Debugger,
-        state: &DebuggingState,
-        highlighter: &SyntaxHighlighter,
-    ) {
+    fn draw<B: Backend>(f: &mut Frame<B>, debugger: &Debugger, state: &DebuggingState) {
         let total_size = f.size();
 
         if let [left_plane, right_plane] = Layout::default()
@@ -60,7 +52,7 @@ impl Tui {
                 )
                 .split(right_plane)[0..3]
             {
-                Tui::draw_source_code(f, &debugger.source_code, left_plane, highlighter);
+                Tui::draw_source_code(f, &debugger.source_code, left_plane);
                 Tui::draw_text(
                     f,
                     String::from(" Pattern space "),
@@ -82,29 +74,20 @@ impl Tui {
         }
     }
 
-    fn draw_source_code<B: Backend>(
-        f: &mut Frame<B>,
-        source_code: &Vec<String>,
-        area: Rect,
-        highlighter: &SyntaxHighlighter,
-    ) {
+    fn draw_source_code<B: Backend>(f: &mut Frame<B>, source_code: &Vec<String>, area: Rect) {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
-        // Highlight the code
-        //let highlighted_code = highlighter.highlight_source_code_to_ansi(source_code);
-        // TODO: There is no sed support
-        let highlighted_code = source_code;
-        let text = highlighted_code.iter().map(|line| Text::raw(line));
+        let text = source_code.iter().map(|line| Text::raw(line));
         let mut text_output: Vec<Text> = Vec::new();
         // TODO: Implement scrolling
-        for number in 0..highlighted_code.len() {
+        for number in 0..source_code.len() {
             // TODO: Proper padding
             text_output.push(Text::styled(
                 format!("{: <4}", (number + 1)),
                 Style::default().fg(Color::Yellow),
             ));
-            text_output.push(Text::raw(highlighted_code.get(number).unwrap()));
+            text_output.push(Text::raw(source_code.get(number).unwrap()));
             text_output.push(Text::raw("\n"));
         }
         let paragraph = Paragraph::new(text_output.iter())
@@ -161,9 +144,8 @@ impl UiAgent for Tui {
         let currentState = self.debugger._mock_state().unwrap();
         loop {
             let debugger = &self.debugger;
-            let highlighter = &self.highlighter;
             self.terminal
-                .draw(|mut f| Tui::draw(&mut f, debugger, &currentState, highlighter));
+                .draw(|mut f| Tui::draw(&mut f, debugger, &currentState));
         }
     }
 }
