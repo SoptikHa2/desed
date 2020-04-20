@@ -1,3 +1,4 @@
+use crate::cli::Options;
 use crate::sed::communication::SedCommunicator;
 use std::collections::VecDeque;
 
@@ -14,7 +15,7 @@ pub struct Debugger {
     ///
     /// If there were multiple instructions on a single line in original source code,
     /// they are spread out so one is on each line.
-    pub soure_code: Vec<String>,
+    pub source_code: Vec<String>,
     /// Source code that was highlighted with ANSI codes, one instruction per line.
     ///
     /// If there were multiple instructions on a single line in original source code,
@@ -42,13 +43,39 @@ pub struct Debugger {
     history_limit: Option<usize>,
 }
 impl Debugger {
-    pub fn new() -> Self {
+    /// Create new instance of debugger and launch sed.
+    pub fn new(settings: Options) -> Result<Self, String> {
         unimplemented!();
     }
-    pub fn next_state<'a>() -> &'a DebuggingState {
+    /// Create new instance of debugger with mock data.
+    /// Useful for UI testing.
+    ///
+    /// TODO: Provide more meaningful data here.
+    pub fn _mock(settings: Options) -> Result<Self, String> {
+        Ok(Debugger {
+            source_code: vec!["source", "code", "example"]
+                .iter()
+                .map(|s| String::from(*s))
+                .collect(),
+            highlighted_source_code: vec!["source", "code", "example"]
+                .iter()
+                .map(|s| String::from(*s))
+                .collect(),
+            state_frames: VecDeque::new(),
+            history_limit: Some(1000),
+        })
+    }
+    /// Go to next sed execution step.
+    ///
+    /// This might return None if we reached end of execution.
+    pub fn next_state<'a>(&'a self) -> Option<&'a DebuggingState> {
         unimplemented!();
     }
-    pub fn previous_state<'a>() -> &'a DebuggingState {
+    /// Go to previous sed execution step as saved in memory.
+    ///
+    /// This might return None if we are at start of execution or
+    /// if there no longer any states left in history.
+    pub fn previous_state<'a>(&'a self) -> Option<&'a DebuggingState> {
         unimplemented!();
     }
 }
