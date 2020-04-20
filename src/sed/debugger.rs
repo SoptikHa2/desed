@@ -65,17 +65,32 @@ impl Debugger {
             history_limit: Some(1000),
         })
     }
+    /// Create new instance of debugging state with mock data.
+    /// Useful for UI testing.
+    ///
+    /// TODO: Provide more meaningful data here.
+    pub fn _mock_state(&self) -> Option<DebuggingState> {
+        Some(DebuggingState {
+            pattern_buffer: String::from("helloworld"),
+            hold_buffer: String::from(""),
+            matched_regex_registers: vec!["hel", "orl"]
+                .iter()
+                .map(|s: &&str| String::from(*s))
+                .collect(),
+            current_line: 4,
+        })
+    }
     /// Go to next sed execution step.
     ///
     /// This might return None if we reached end of execution.
-    pub fn next_state<'a>(&'a self) -> Option<&'a DebuggingState> {
+    pub fn next_state(&self) -> Option<DebuggingState> {
         unimplemented!();
     }
     /// Go to previous sed execution step as saved in memory.
     ///
     /// This might return None if we are at start of execution or
     /// if there no longer any states left in history.
-    pub fn previous_state<'a>(&'a self) -> Option<&'a DebuggingState> {
+    pub fn previous_state(&self) -> Option<DebuggingState> {
         unimplemented!();
     }
 }
