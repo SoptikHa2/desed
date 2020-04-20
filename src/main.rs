@@ -1,8 +1,9 @@
 mod sed;
 use sed::debugger::Debugger;
-
+mod cli;
 mod ui;
 
 fn main() {
-    println!("Hello, world!");
+    let options = cli::construct_app();
+    println!("{:?}", options);
 }
