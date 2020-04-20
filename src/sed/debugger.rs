@@ -41,11 +41,22 @@ pub struct Debugger {
     /// This will never be zero. If it is, debugger will panic.
     history_limit: Option<usize>,
 }
+impl Debugger {
+    pub fn new() -> Self {
+        unimplemented!();
+    }
+    pub fn next_state<'a>() -> &'a DebuggingState {
+        unimplemented!();
+    }
+    pub fn previous_state<'a>() -> &'a DebuggingState {
+        unimplemented!();
+    }
+}
 
 /// One state of sed program execution.
 ///
 /// Remembers state of sed program execution.
-struct DebuggingState {
+pub struct DebuggingState {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,
     /// State of secondary, or hold, buffer
