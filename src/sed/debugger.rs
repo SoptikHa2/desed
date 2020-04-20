@@ -45,7 +45,7 @@ pub struct Debugger {
 /// One state of sed program execution.
 ///
 /// Remembers state of sed program execution.
-pub struct DebuggingState {
+struct DebuggingState {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,
     /// State of secondary, or hold, buffer
