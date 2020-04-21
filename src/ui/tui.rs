@@ -61,19 +61,20 @@ impl Tui {
         if let [left_plane, right_plane] = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Ratio(2, 3), Constraint::Ratio(1, 3)].as_ref())
-            .split(total_size)[0..2]
+            .split(total_size)[..]
         {
-            if let [pattern_plane, hold_plane, regex_match_plane] = Layout::default()
+            if let [pattern_plane, hold_plane, regex_match_plane, output_plane] = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(
                     [
-                        Constraint::Ratio(1, 3),
-                        Constraint::Ratio(1, 3),
-                        Constraint::Ratio(1, 3),
+                        Constraint::Ratio(1, 4),
+                        Constraint::Ratio(1, 4),
+                        Constraint::Ratio(1, 4),
+                        Constraint::Ratio(1, 4),
                     ]
                     .as_ref(),
                 )
-                .split(right_plane)[0..3]
+                .split(right_plane)[..]
             {
                 Tui::draw_source_code(
                     f,
@@ -87,18 +88,24 @@ impl Tui {
                 Tui::draw_text(
                     f,
                     String::from(" Pattern space "),
-                    &state.pattern_buffer,
+                    Some(&state.pattern_buffer),
                     pattern_plane,
                 );
                 Tui::draw_text(
                     f,
                     String::from(" Hold space "),
-                    &state.hold_buffer,
+                    Some(&state.hold_buffer),
                     hold_plane,
                 );
                 Tui::draw_regex_space(f, &state.matched_regex_registers, regex_match_plane);
+                Tui::draw_text(
+                    f,
+                    String::from(" Output "),
+                    state.output.as_ref().map(|s| s.join("\n")).as_ref(),
+                    output_plane,
+                );
             } else {
-                panic!("Failed to generate vertically split layout 1:1:1.");
+                panic!("Failed to generate vertically split layout 1:1:1:1.");
             }
         } else {
             panic!("Failed to generate horizontally split layout 2:3.");
@@ -196,12 +203,13 @@ impl Tui {
     fn draw_text<B: Backend>(
         f: &mut Frame<B>,
         heading: String,
-        text_to_write: &String,
+        text_to_write: Option<&String>,
         area: Rect,
     ) {
         let block = Block::default().title(&heading).borders(Borders::ALL);
+        let default_string = String::new();
         let text = [Text::styled(
-            format!("\n{}", text_to_write),
+            format!("\n{}", text_to_write.unwrap_or(&default_string)),
             Style::default().fg(Color::LightBlue),
         )];
         let paragraph = Paragraph::new(text.iter()).block(block).wrap(true);
