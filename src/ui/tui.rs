@@ -1,9 +1,10 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::UiAgent;
-use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
+use crossterm::QueueableCommand;
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use std::io;
+use std::io::{self, Write};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -35,7 +36,8 @@ pub struct Tui {
 }
 impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
-        let stdout = io::stdout();
+        let mut stdout = io::stdout();
+        stdout.queue(event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
         crossterm::terminal::enable_raw_mode();
@@ -198,7 +200,6 @@ impl Tui {
             draw_memory.current_startline = display_start;
         }
 
-        // TODO: Implement scrolling
         // Define closure that prints one more line of source code
         let mut add_new_line = |line_number| {
             let linenr_color = if breakpoints.contains(&line_number) {
@@ -300,8 +301,11 @@ impl UiAgent for Tui {
                 // Oh we got an event from user
                 if event::poll(tick_rate - last_tick.elapsed()).unwrap() {
                     // Send interrupt
-                    if let Event::Key(key) = event::read().unwrap() {
-                        tx.send(Interrupt::UserEvent(key)).unwrap();
+                    let event = event::read().unwrap();
+                    if let Event::Key(key) = event {
+                        tx.send(Interrupt::KeyPressed(key)).unwrap();
+                    } else if let Event::Mouse(mouse) = event {
+                        tx.send(Interrupt::MouseEvent(mouse)).unwrap();
                     }
                 }
                 if last_tick.elapsed() > tick_rate {
@@ -324,7 +328,7 @@ impl UiAgent for Tui {
                 // Handle user input. Vi-like controls are available,
                 // including prefixing a command with number to execute it
                 // multiple times (in case of breakpoint toggles breakpoint on given line).
-                Interrupt::UserEvent(event) => match event.code {
+                Interrupt::KeyPressed(event) => match event.code {
                     // Exit
                     KeyCode::Char('q') => {
                         // Terminal might go crazy if we don't switch the mode back
@@ -433,6 +437,27 @@ impl UiAgent for Tui {
                         self.pressed_keys_buffer.clear();
                     }
                 },
+                Interrupt::MouseEvent(event) => match event {
+                    // Button pressed, mark current line as breakpoint
+                    MouseEvent::Up(_button, _col, row, _key_modifiers) => {
+                        if self.breakpoints.contains(&((row - 1) as usize)) {
+                            self.breakpoints.remove(&((row - 1) as usize));
+                        } else {
+                            self.breakpoints.insert((row - 1) as usize);
+                        }
+                    }
+                    MouseEvent::ScrollUp(_col, _row, _key_modifiers) => {
+                        if self.cursor > 0 {
+                            self.cursor -= 1;
+                        }
+                    }
+                    MouseEvent::ScrollDown(_col, _row, _key_modifiers) => {
+                        if self.cursor < debugger.source_code.len() {
+                            self.cursor += 1;
+                        }
+                    }
+                    _ => {}
+                },
                 Interrupt::IntervalElapsed => {}
             }
             // Draw
@@ -462,7 +487,8 @@ impl UiAgent for Tui {
 
 /// Why did we wake up drawing thread?
 enum Interrupt {
-    UserEvent(KeyEvent),
+    KeyPressed(KeyEvent),
+    MouseEvent(MouseEvent),
     IntervalElapsed,
 }
 
