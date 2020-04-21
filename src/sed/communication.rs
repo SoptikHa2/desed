@@ -160,13 +160,14 @@ impl SedCommunicator {
                     if line.starts_with("  regex[") {
                         // We PROBABLY have new regex now. There is no way to know for sure.
                         // Just carry on.
-                        currently_loading_regex_matches = false;
+                        currently_loading_multiline_regex_match = false;
                     } else {
                         let last_regex_idx = regex_registers.len() - 1;
                         regex_registers
                             .get_mut(last_regex_idx)
                             .unwrap()
                             .push_str(line);
+                        continue;
                     }
                 }
                 match line {
