@@ -28,6 +28,10 @@ From cargo:
 cargo install desed
 ```
 
+Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
+
+Use precompiled binaries: see [releases](https://github.com/SoptikHa2/desed/releases).
+
 ### Dependencies:
 
 Development: `rust`, `cargo`
