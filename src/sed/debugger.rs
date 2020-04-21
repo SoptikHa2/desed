@@ -21,7 +21,7 @@ pub struct Debugger {
     /// See `history_limit` for maximum debugging states stored.
     /// We rotate them afterwards.
     pub state_frames: Vec<DebuggingState>,
-    current_frame: usize,
+    pub current_frame: usize,
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.

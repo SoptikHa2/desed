@@ -40,6 +40,7 @@ Runtime: `sed` (GNU version)
 - `b` to toggle breakpoint (prefix with number to toggle breakpoint on target line)
 - `s` to step forward, `a` to step backwards
 - `r` to run to next breakpoint or end of script, `R` to do the same but backwards
+- `l` to instantly reload code and continue debugging in the exactly same place as before
 - `q` to [quit](https://github.com/hakluke/how-to-exit-vim)
 
 # FAQ

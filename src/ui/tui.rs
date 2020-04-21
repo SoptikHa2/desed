@@ -1,5 +1,5 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
-use crate::ui::generic::UiAgent;
+use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
 use crossterm::QueueableCommand;
 use std::cmp::{max, min};
@@ -286,7 +286,7 @@ impl Tui {
 }
 
 impl UiAgent for Tui {
-    fn start(mut self) -> std::result::Result<(), std::string::String> {
+    fn start(mut self) -> std::result::Result<ApplicationExitReason, std::string::String> {
         let mut current_state = self.debugger.current_state().ok_or(String::from(
             "It looks like the source code loaded was empty. Nothing to do.",
         ))?;
@@ -337,7 +337,7 @@ impl UiAgent for Tui {
                         // Disable our weird mouse handling so we don't break mouse handling of parent terminal
                         let mut stdout = io::stdout();
                         stdout.queue(event::DisableMouseCapture);
-                        return Ok(());
+                        return Ok(ApplicationExitReason::UserExit);
                     }
                     // Move cursor down
                     KeyCode::Char('j') | KeyCode::Down => {
@@ -428,6 +428,7 @@ impl UiAgent for Tui {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     },
+                    // Same as 'r', but backwards
                     KeyCode::Char('R') => loop {
                         if let Some(newstate) = debugger.previous_state() {
                             current_state = newstate;
@@ -440,6 +441,10 @@ impl UiAgent for Tui {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     },
+                    // Reload source code and try to enter current state again
+                    KeyCode::Char('l') => {
+                        return Ok(ApplicationExitReason::Reload(self.debugger.current_frame));
+                    }
                     KeyCode::Char(other) => match other {
                         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                             self.pressed_keys_buffer.push(other);

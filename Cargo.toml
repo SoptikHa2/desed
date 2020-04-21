@@ -7,7 +7,7 @@ readme = "README.md"
 license-file = "LICENSE"
 keywords = ["awk", "debugger", "debugging", "tui"]
 categories = ["command-line-utilities", "development-tools", "development-tools::debugging"]
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Petr Šťastný <petr.stastny01@gmail.com>"]
 edition = "2018"
 
