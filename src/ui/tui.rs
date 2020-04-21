@@ -125,29 +125,38 @@ impl Tui {
         let text = source_code.iter().map(|line| Text::raw(line));
         let mut text_output: Vec<Text> = Vec::new();
         // TODO: Implement scrolling
-        for number in 0..source_code.len() {
-            let linenr_color = if breakpoints.contains(&number) {
+        // Define closure that prints one more line of source code
+        let mut add_new_line = |line_number| {
+            let linenr_color = if breakpoints.contains(&line_number) {
                 Color::LightRed
             } else {
                 Color::Yellow
             };
-            let linenr_bg_color = if number == cursor {
+            let linenr_bg_color = if line_number == cursor {
                 Color::DarkGray
             } else {
                 Color::Reset
             };
-            let linenr_format = if number == interpreter_line {
-                format!("{: <3}▶", (number + 1))
+            let linenr_format = if line_number == interpreter_line {
+                format!("{: <3}▶", (line_number + 1))
             } else {
-                format!("{: <4}", (number + 1))
+                format!("{: <4}", (line_number + 1))
             };
             text_output.push(Text::styled(
                 linenr_format,
                 Style::default().fg(linenr_color).bg(linenr_bg_color),
             ));
-            text_output.push(Text::raw(source_code.get(number).unwrap()));
+            if let Some(source) = source_code.get(line_number) {
+                text_output.push(Text::raw(source));
+            }
             text_output.push(Text::raw("\n"));
+        };
+        for number in 0..source_code.len() {
+            add_new_line(number);
         }
+        // TODO: Do this only when we scrolled down and see end of file
+        // Add one more "phantom" line so we see line where current segment execution ends
+        add_new_line(source_code.len());
         let paragraph = Paragraph::new(text_output.iter())
             .block(block_source_code)
             .wrap(true);
