@@ -7,7 +7,7 @@ Desed is a command line tool with beautiful TUI that provides users with comfort
 
 Some of the notable features include:
 
-- Preivew variable values, both of them!
+- Preview variable values, both of them!
 - See how will a substitute command affect pattern space before it runs
 - Step through sed script - both forward and backwards!
 - Place breakpoints and examine program state
