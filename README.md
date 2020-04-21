@@ -47,7 +47,7 @@ Runtime: `sed` (GNU version, >= 4.6)
 # FAQ
 
 ## How does it work?
-GNU sed actually provides pretty useful debugging interface, try it yourself with `--debug` flag. However the interface is not interactive and I wanted something closer to traditional debugger.
+GNU sed actually provides pretty useful debugging interface, try it yourself with `--debug` flag. However the interface is not interactive and I wanted something closer to traditional debugger. [I've written something here](https://soptik.tech/articles/building-desed-the-sed-debugger.html).
 
 ## Does it really work?
 Depends. Sed actually doesn't tell me which line number is it currently executing, so I have to emulate parts of sed to guess that. Which might not be bulletproof. But it certainly worked good enough to debug tetris without issues.
