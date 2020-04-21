@@ -255,7 +255,7 @@ impl Tui {
         } else {
             for (i, m) in regex_space.iter().enumerate() {
                 text.push(Text::styled(
-                    format!("\n\\{}    ", (i + 1)),
+                    format!("\n\\{}    ", i),
                     Style::default().fg(Color::DarkGray),
                 ));
                 text.push(Text::raw(m));
