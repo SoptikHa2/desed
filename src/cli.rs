@@ -33,9 +33,14 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
             .required(false))
         .arg(Arg::with_name("debug")
             .long("debug")
-            .help("Do not debug sed program but rather debug this debugger. This will self-diagnose to stdout and print detailed info to stderr. Use redirection for verbosity control.")
+            .help("Do not debug sed program but rather debug this debugger. This will enable various debug printing to stderr.")
             .takes_value(false)
             .required(false))
+        .arg(Arg::with_name("sed-path")
+            .long("sed-path")
+            .help("Specify path to sed that should be used.")
+            .takes_value(true)
+            .default_value("sed"))
         .arg(Arg::with_name("sed-script")
             .help("Input file with sed script")
             .required(true)
@@ -56,6 +61,7 @@ pub struct Options {
     pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
     pub debug: bool,
+    pub sed_path: String,
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
@@ -67,6 +73,11 @@ impl Options {
         let input_file: PathBuf = match PathBuf::from_str(matches.value_of("input-file").unwrap()) {
             Ok(x) => x,
             Err(_) => return Err(String::from("Failed to load input file path.")),
+        };
+
+        let sed_path: String = match matches.value_of("sed-path") {
+            Some(x) => String::from(x),
+            None => String::from("sed"),
         };
 
         let mut sed_parameters: Vec<String> = Vec::with_capacity(4);
@@ -90,6 +101,7 @@ impl Options {
 
         Ok(Options {
             sed_script,
+            sed_path,
             input_file,
             sed_parameters,
             debug,

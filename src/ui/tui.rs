@@ -288,7 +288,7 @@ impl Tui {
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<ApplicationExitReason, std::string::String> {
         let mut current_state = self.debugger.current_state().ok_or(String::from(
-            "It looks like the source code loaded was empty. Nothing to do.",
+            "It looks like the source code loaded was empty. Nothing to do. Are you sure sed can process the file? Make sure you didn't forget the -E option.",
         ))?;
 
         // Setup event loop and input handling

@@ -24,34 +24,44 @@ impl SedCommunicator {
         });
     }
     fn get_sed_output(&self) -> Result<String, String> {
-        let sed_debug_command = Command::new("sed")
-            .args(
-                self.options.sed_parameters.iter().map(|s| s.as_str())
-                .chain(
-                vec![
-                    "--debug",
-                    "-f",
-                    self.options
-                        .sed_script
-                        .to_str()
-                        .ok_or(String::from("Invalid sed script path. Is it valid UTF-8?"))?,
-                    self.options
-                        .input_file
-                        .to_str()
-                        .ok_or(String::from("Invalid input path. Is it valid UTF-8?"))?,
-                ]
-                .iter()
-                .map(|s| *s))
-            )
+        let mandatory_parameters = vec![
+            "--debug",
+            "-f",
+            self.options
+                .sed_script
+                .to_str()
+                .ok_or(String::from("Invalid sed script path. Is it valid UTF-8?"))?,
+            self.options
+                .input_file
+                .to_str()
+                .ok_or(String::from("Invalid input path. Is it valid UTF-8?"))?,
+        ];
+        let constructed_cmd_line = self
+            .options
+            .sed_parameters
+            .iter()
+            .map(|s| s.as_str())
+            .chain(mandatory_parameters.iter().map(|s| *s))
+            .collect::<Vec<&str>>();
+        let sed_debug_command = Command::new(&self.options.sed_path)
+            .args(&constructed_cmd_line)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .output()
             .ok()
-            .ok_or(String::from(
-                "Sed failed to process your script. Are you using GNU sed? If so, please report the bug.",
-            ))?
+            .ok_or(
+                format!("Sed failed to process your script. Are you using GNU sed? If so, please report the bug.\nINFO: Sed was called using \"{} {}\"", &self.options.sed_path, constructed_cmd_line.join(" ")),
+            )?
             .stdout;
+
+        if self.options.debug {
+            eprintln!(
+                "[Info] Called sed with \"{} {}\"",
+                self.options.sed_path,
+                constructed_cmd_line.join(" ")
+            );
+        }
 
         Ok(String::from_utf8(sed_debug_command).ok().ok_or(String::from("String received from sed doesn't seem to be UTF-8. If this continues to happen, please report the bug."))?)
     }
