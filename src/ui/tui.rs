@@ -4,7 +4,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
 use crossterm::QueueableCommand;
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use std::io::{self, Write};
+use std::io::{self};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -157,12 +157,11 @@ impl Tui {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
-        let text = source_code.iter().map(|line| Text::raw(line));
         let mut text_output: Vec<Text> = Vec::new();
 
         // Scroll:
         // Focused line is line that should always be at the center of the screen.
-        let mut display_start = 0;
+        let display_start;
         {
             let grace_lines = 10;
             let height = area.height as i32;
