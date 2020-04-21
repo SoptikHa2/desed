@@ -1,5 +1,6 @@
 use super::debugger::DebuggingState;
 use crate::cli::Options;
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
 /// This handles communication with GNU sed.
@@ -14,7 +15,8 @@ impl SedCommunicator {
         let output = self.get_sed_output()?;
 
         let program_source = self.parse_program_source(&output);
-        let frames = self.parse_state_frames(&output);
+        let label_jump_map = self.build_jump_map(&program_source);
+        let frames = self.parse_state_frames(&output, &label_jump_map, program_source.len());
         return Ok(DebugInfoFromSed {
             program_source,
             states: frames,
@@ -116,7 +118,12 @@ impl SedCommunicator {
     /// hello           # Value printed to stdout. This tends to come after COMMAND or END-OF-CYCLE.
     /// ```
     ///
-    fn parse_state_frames(&self, sed_output: &String) -> Vec<DebuggingState> {
+    fn parse_state_frames(
+        &self,
+        sed_output: &String,
+        label_jump_map: &HashMap<String, usize>,
+        lines_of_code: usize,
+    ) -> Vec<DebuggingState> {
         // First of all, skip the sed program source code.
         let lines = sed_output
             .lines()
@@ -139,6 +146,7 @@ impl SedCommunicator {
         let mut previous_output = None;
         // If true, we're currently parsing `MATCHED REGEX REGISTERS`, which lasts several lines.
         let mut currently_loading_regex_matches: bool = false;
+        let mut substitution_successful: bool = false;
 
         // TODO: Multiline regexes are not displayed correctly and will fall to output instead. FIXME!!
         for line in lines {
@@ -154,6 +162,7 @@ impl SedCommunicator {
                                 .trim(),
                         );
                         regex_registers.push(rest_of_regex);
+                        substitution_successful = true;
                     }
                     x => {
                         currently_loading_regex_matches = false;
@@ -191,7 +200,13 @@ impl SedCommunicator {
                     });
 
                     // Push line number forward
-                    sed_line = self.next_line_position(sed_line, current_command);
+                    sed_line = self.next_line_position(
+                        sed_line,
+                        current_command,
+                        label_jump_map,
+                        lines_of_code,
+                        substitution_successful,
+                    );
 
                     // Record new command
                     previous_command = Some(String::from(current_command));
@@ -199,6 +214,7 @@ impl SedCommunicator {
                     // Clear old info, such as output
                     previous_output = None;
                     regex_registers = Vec::new();
+                    substitution_successful = false;
                 }
                 x if x.starts_with("MATCHED REGEX REGISTERS") => {
                     currently_loading_regex_matches = true;
@@ -221,6 +237,7 @@ impl SedCommunicator {
                     previous_command = None;
                     previous_output = None;
                     regex_registers = Vec::new();
+                    substitution_successful = false;
                 }
                 x => {
                     // Assume this is returned value
@@ -238,9 +255,74 @@ impl SedCommunicator {
     }
 
     /// Guess next command position.
-    fn next_line_position(&self, current_position: usize, current_command: &str) -> usize {
-        // TODO: Handle jumps
-        return current_position + 1;
+    ///
+    /// Try to guess if the current command jumps anywhere. If so,
+    /// try to guess where.
+    ///
+    /// If not, just increment one.
+    fn next_line_position(
+        &self,
+        current_position: usize,
+        current_command: &str,
+        label_jump_map: &HashMap<String, usize>,
+        lines_of_code: usize,
+        last_match_successful: bool,
+    ) -> usize {
+        // Handle jumps
+        match current_command {
+            // Unconditional jump
+            x if x.starts_with("b") => {
+                let rest = x[1..].trim();
+                if rest == "" {
+                    // Jump to end of script
+                    lines_of_code - 1
+                } else if let Some(target) = label_jump_map.get(rest) {
+                    // Jump to target label
+                    *target
+                } else {
+                    // Label not found, just go one line down I guess?
+                    current_position + 1
+                }
+            }
+            // Conditional jump
+            // Jump only if last substition was succesful
+            // (or, in case of T, only if the last substituion was not succesful)
+            x if x.starts_with("t") | x.starts_with("T") => {
+                if (x.starts_with("t") && last_match_successful)
+                    || (x.starts_with("T") && !last_match_successful)
+                {
+                    let rest = x[1..].trim();
+                    if rest == "" {
+                        // jump to end of script
+                        lines_of_code - 1
+                    } else if let Some(target) = label_jump_map.get(rest) {
+                        // Jump to target label
+                        *target
+                    } else {
+                        // Label not found, just go one line down I guess?
+                        current_position + 1
+                    }
+                } else {
+                    current_position + 1
+                }
+            }
+            _ => {
+                // Unknown command, just go down
+                current_position + 1
+            }
+        }
+    }
+
+    /// Build label jump map
+    fn build_jump_map(&self, source_code: &Vec<String>) -> HashMap<String, usize> {
+        let mut map: HashMap<String, usize> = HashMap::new();
+        for (i, line) in source_code.iter().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with(":") {
+                map.insert(String::from(trimmed.trim_start_matches(":")), i);
+            }
+        }
+        map
     }
 }
 
