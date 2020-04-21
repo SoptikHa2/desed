@@ -442,10 +442,11 @@ impl UiAgent for Tui {
                 Interrupt::MouseEvent(event) => match event {
                     // Button pressed, mark current line as breakpoint
                     MouseEvent::Up(_button, _col, row, _key_modifiers) => {
-                        if self.breakpoints.contains(&((row - 1) as usize)) {
-                            self.breakpoints.remove(&((row - 1) as usize));
+                        let target_breakpoint = (row - 1) as usize + draw_memory.current_startline;
+                        if self.breakpoints.contains(&target_breakpoint) {
+                            self.breakpoints.remove(&target_breakpoint);
                         } else {
-                            self.breakpoints.insert((row - 1) as usize);
+                            self.breakpoints.insert(target_breakpoint);
                         }
                     }
                     MouseEvent::ScrollUp(_col, _row, _key_modifiers) => {
