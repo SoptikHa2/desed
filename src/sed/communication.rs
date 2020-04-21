@@ -23,6 +23,8 @@ impl SedCommunicator {
     fn get_sed_output(&self) -> Result<String, String> {
         let sed_debug_command = Command::new("sed")
             .args(
+                self.options.sed_parameters.iter().map(|s| s.as_str())
+                .chain(
                 vec![
                     "--debug",
                     "-f",
@@ -36,8 +38,7 @@ impl SedCommunicator {
                         .ok_or(String::from("Invalid input path. Is it valid UTF-8?"))?,
                 ]
                 .iter()
-                .map(|s| *s)
-                .chain(self.options.sed_parameters.iter().map(|s| s.as_str())),
+                .map(|s| *s))
             )
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
