@@ -202,7 +202,7 @@ impl Tui {
 
 impl UiAgent for Tui {
     fn start(mut self) -> std::result::Result<(), std::string::String> {
-        let mut current_state = self.debugger.next_state().ok_or(String::from(
+        let mut current_state = self.debugger.current_state().ok_or(String::from(
             "It looks like the source code loaded was empty. Nothing to do.",
         ))?;
 
@@ -289,9 +289,9 @@ impl UiAgent for Tui {
                     }
                     // Run till end or breakpoint
                     KeyCode::Char('r') => loop {
-                        let mut newstate = debugger.next_state();
-                        if let Some(newstate) = newstate {
-                            if self.breakpoints.contains(&newstate.current_line) {
+                        if let Some(newstate) = debugger.next_state() {
+                            current_state = newstate;
+                            if self.breakpoints.contains(&current_state.current_line) {
                                 break;
                             }
                         } else {

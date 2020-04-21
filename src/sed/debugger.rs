@@ -64,6 +64,10 @@ impl Debugger {
             sed_command: Some(String::from("source")),
         })
     }
+    pub fn current_state(&self) -> Option<DebuggingState> {
+        // TODO: Solve this without cloning. This is awful.
+        self.state_frames.get(self.current_frame).map(|s| s.clone())
+    }
     /// Go to next sed execution step.
     ///
     /// This might return None if we reached end of execution.
@@ -73,9 +77,7 @@ impl Debugger {
         }
         self.current_frame += 1;
         // TODO: Solve this without cloning. This is awful.
-        self.state_frames
-            .get(self.current_frame - 1)
-            .map(|s| s.clone())
+        self.state_frames.get(self.current_frame).map(|s| s.clone())
     }
     /// Go to previous sed execution step as saved in memory.
     ///
@@ -87,9 +89,7 @@ impl Debugger {
         }
         self.current_frame -= 1;
         // TODO: Solve this without cloning. This is awful.
-        self.state_frames
-            .get(self.current_frame + 1)
-            .map(|s| s.clone())
+        self.state_frames.get(self.current_frame).map(|s| s.clone())
     }
 }
 

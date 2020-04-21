@@ -137,15 +137,22 @@ impl SedCommunicator {
         // If sed printed any output because of last command, what was it
         let mut previous_output = None;
         // If true, we're currently parsing `MATCHED REGEX REGISTERS`, which lasts several lines.
-        // There may even be one regex parsed over multiple lines.
         let mut currently_loading_regex_matches: bool = false;
 
+        // TODO: Multiline regexes are not displayed correctly and will fall to output instead. FIXME!!
         for line in lines {
             // If we are trying to parse regexe matches, do so
             if currently_loading_regex_matches {
                 match line {
                     x if x.starts_with("  ") => {
-                        unimplemented!();
+                        let mut rest_of_regex: String = String::from(
+                            x.chars()
+                                .skip_while(|c| *c != '=')
+                                .skip(1)
+                                .collect::<String>()
+                                .trim(),
+                        );
+                        regex_registers.push(rest_of_regex);
                     }
                     x => {
                         currently_loading_regex_matches = false;
@@ -192,7 +199,7 @@ impl SedCommunicator {
                     previous_output = None;
                     regex_registers = Vec::new();
                 }
-                x if x.starts_with("MATCHED_REGEX_REGISTERS") => {
+                x if x.starts_with("MATCHED REGEX REGISTERS") => {
                     currently_loading_regex_matches = true;
                 }
                 x if x.starts_with("END-OF-CYCLE:") => {
