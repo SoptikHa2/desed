@@ -37,7 +37,7 @@ Runtime: `sed` (GNU version, >= 4.6)
 ## Controls
 
 - Mouse scroll to scroll through source code, click on line to toggle breakpoint
-- `j`, `k`, `g`, `G`, just as in Vim. Prefixing with numbers work too.
+- `j`, `k`, `g`, `G`, just as in Vim. Prefixing with numbers works too.
 - `b` to toggle breakpoint (prefix with number to toggle breakpoint on target line)
 - `s` to step forward, `a` to step backwards
 - `r` to run to next breakpoint or end of script, `R` to do the same but backwards
@@ -66,4 +66,4 @@ Because it's the standard stream editor for filtering and transforming text. And
 
 ## What is the roadmap for future updates?
 
-I would like to introduce syntax highlighting and add this tools to standard repositories of all major distributions.
+I would like to introduce syntax highlighting and add this tool to standard repositories of all major distributions.
