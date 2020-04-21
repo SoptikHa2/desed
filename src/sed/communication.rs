@@ -19,7 +19,8 @@ impl SedCommunicator {
         let frames = self.parse_state_frames(&output, &label_jump_map, program_source.len());
         return Ok(DebugInfoFromSed {
             program_source,
-            states: frames,
+            states: frames.0,
+            last_output: frames.1,
         });
     }
     fn get_sed_output(&self) -> Result<String, String> {
@@ -118,12 +119,13 @@ impl SedCommunicator {
     /// hello           # Value printed to stdout. This tends to come after COMMAND or END-OF-CYCLE.
     /// ```
     ///
+    /// This returns individual frames *and* output of the last segement of the sed script.
     fn parse_state_frames(
         &self,
         sed_output: &String,
         label_jump_map: &HashMap<String, usize>,
         lines_of_code: usize,
-    ) -> Vec<DebuggingState> {
+    ) -> (Vec<DebuggingState>, Option<Vec<String>>) {
         // First of all, skip the sed program source code.
         let lines = sed_output
             .lines()
@@ -274,16 +276,7 @@ impl SedCommunicator {
             }
         }
 
-        result.push(DebuggingState {
-            pattern_buffer: String::from(current_pattern),
-            hold_buffer: String::from(current_hold),
-            current_line: sed_line,
-            matched_regex_registers: regex_registers,
-            output: previous_output,
-            sed_command: None,
-        });
-
-        result
+        (result, previous_output)
     }
 
     /// Guess next command position.
@@ -361,4 +354,5 @@ impl SedCommunicator {
 pub struct DebugInfoFromSed {
     pub program_source: Vec<String>,
     pub states: Vec<DebuggingState>,
+    pub last_output: Option<Vec<String>>,
 }
