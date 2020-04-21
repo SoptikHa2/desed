@@ -11,6 +11,7 @@ Some of the notable features include:
 - See how will a substitute command affect pattern space before it runs
 - Step through sed script - both forward and backwards!
 - Place breakpoints and examine program state
+- Hot reload and see what changes as you edit source code
 - It's name is a palindrome
 
 ## Install

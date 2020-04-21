@@ -20,8 +20,9 @@
                 }
             },
             "args": [
-                "test.sed",
-                "input.txt"
+                "sed/graph-problem.sed",
+                "sed/graph-challenge.txt",
+                "-E"
             ],
             "cwd": "${workspaceFolder}"
         },
