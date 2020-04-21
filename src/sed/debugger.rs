@@ -1,4 +1,5 @@
 use crate::cli::Options;
+use crate::sed::communication::DebugInfoFromSed;
 use crate::sed::communication::SedCommunicator;
 
 /// Sed program debugger.
@@ -26,10 +27,31 @@ impl Debugger {
     /// Create new instance of debugger and launch sed.
     pub fn new(settings: Options) -> Result<Self, String> {
         let mut communicator = SedCommunicator::new(settings);
-        let data = communicator.getExecutionInfoFromSed()?;
+        let mut data: DebugInfoFromSed = communicator.getExecutionInfoFromSed()?;
+        // Shift all outputs and pattern matches one frame earlier.
+        // The way it's done now (output appears one frame after it's source)
+        // is, while the way sed works, very confusing.
+        let mut states: Vec<DebuggingState> = data.states;
+        states.reverse();
+        let mut states_shifted: Vec<DebuggingState> = Vec::with_capacity(states.len());
+        let mut previous_output: Option<Vec<String>> = None;
+        let mut previous_matches: Vec<String> = Vec::new();
+        for state in states {
+            states_shifted.push(DebuggingState {
+                pattern_buffer: state.pattern_buffer,
+                current_line: state.current_line,
+                hold_buffer: state.hold_buffer,
+                matched_regex_registers: previous_matches,
+                output: previous_output,
+                sed_command: state.sed_command,
+            });
+            previous_output = state.output;
+            previous_matches = state.matched_regex_registers;
+        }
+        states_shifted.reverse();
         Ok(Debugger {
             source_code: data.program_source,
-            state_frames: data.states,
+            state_frames: states_shifted,
             current_frame: 0,
         })
     }
