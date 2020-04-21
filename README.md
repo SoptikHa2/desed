@@ -64,4 +64,4 @@ Because it's the standard stream editor for filtering and transforming text. And
 
 ## What is the roadmap for future updates?
 
-I would like to introduce syntax highlighting and add this tools to standard repositories of all major distributioins.
+I would like to introduce syntax highlighting and add this tools to standard repositories of all major distributions.
