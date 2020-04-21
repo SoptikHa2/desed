@@ -39,7 +39,7 @@ impl Tui {
             terminal,
             breakpoints: HashSet::new(),
             cursor: 0,
-            forced_refresh_rate: 100,
+            forced_refresh_rate: 200,
         })
     }
 
@@ -258,7 +258,7 @@ impl UiAgent for Tui {
                     }
                     // Move cursor down
                     KeyCode::Char('j') | KeyCode::Down => {
-                        if self.cursor < debugger.source_code.len() - 1 {
+                        if self.cursor < debugger.source_code.len() {
                             self.cursor += 1;
                         }
                     }
@@ -274,7 +274,7 @@ impl UiAgent for Tui {
                     }
                     // Go to bottom of file
                     KeyCode::Char('G') => {
-                        self.cursor = debugger.source_code.len() - 1;
+                        self.cursor = debugger.source_code.len();
                     }
                     // Toggle breakpoint on current line
                     KeyCode::Char('b') => {
