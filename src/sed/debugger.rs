@@ -55,37 +55,6 @@ impl Debugger {
             current_frame: 0,
         })
     }
-    /// Create new instance of debugger with mock data.
-    /// Useful for UI testing.
-    ///
-    /// TODO: Provide more meaningful data here.
-    pub fn _mock(settings: Options) -> Result<Self, String> {
-        Ok(Debugger {
-            source_code: vec!["source", "code", "example"]
-                .iter()
-                .map(|s| String::from(*s))
-                .collect(),
-            state_frames: Vec::new(),
-            current_frame: 1,
-        })
-    }
-    /// Create new instance of debugging state with mock data.
-    /// Useful for UI testing.
-    ///
-    /// TODO: Provide more meaningful data here.
-    pub fn _mock_state(&self) -> Option<DebuggingState> {
-        Some(DebuggingState {
-            pattern_buffer: String::from("helloworld"),
-            hold_buffer: String::from(""),
-            matched_regex_registers: vec!["hel", "orl"]
-                .iter()
-                .map(|s: &&str| String::from(*s))
-                .collect(),
-            current_line: 2,
-            output: None,
-            sed_command: Some(String::from("source")),
-        })
-    }
     pub fn current_state(&self) -> Option<DebuggingState> {
         // TODO: Solve this without cloning. This is awful.
         self.state_frames.get(self.current_frame).map(|s| s.clone())
