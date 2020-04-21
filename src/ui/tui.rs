@@ -1,6 +1,7 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::UiAgent;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use std::cmp::{max, min};
 use std::collections::HashSet;
 use std::io;
 use std::sync::mpsc;
@@ -77,6 +78,7 @@ impl Tui {
         interpreter_line: usize,
         // Line (0-based) which should be approximately at the center of the screen
         focused_line: usize,
+        draw_memory: &mut DrawMemory,
     ) {
         let total_size = f.size();
 
@@ -105,6 +107,7 @@ impl Tui {
                     focused_line,
                     cursor,
                     interpreter_line,
+                    draw_memory,
                     left_plane,
                 );
                 Tui::draw_text(
@@ -146,6 +149,7 @@ impl Tui {
         focused_line: usize,
         cursor: usize,
         interpreter_line: usize,
+        draw_memory: &mut DrawMemory,
         area: Rect,
     ) {
         let block_source_code = Block::default()
@@ -153,6 +157,47 @@ impl Tui {
             .borders(Borders::ALL);
         let text = source_code.iter().map(|line| Text::raw(line));
         let mut text_output: Vec<Text> = Vec::new();
+
+        // Scroll:
+        // Focused line is line that should always be at the center of the screen.
+        let mut display_start = 0;
+        {
+            let grace_lines = 10;
+            let height = area.height as i32;
+            let previous_startline = draw_memory.current_startline;
+            // Minimum startline that should be possible to have in any case
+            let minimum_startline = 0;
+            // Maximum startline that should be possible to have in any case
+            // Magical number 4: I don't know what it's doing here, but it works this way. Otherwise
+            // we just keep maximum scroll four lines early.
+            let maximum_startline = (source_code.len() as i32 - 1) - height + 4;
+            // Minimum startline position that makes sense - we want visible code but within limits of the source code height.
+            let mut minimum_viable_startline = max(
+                focused_line as i32 - height + grace_lines,
+                minimum_startline,
+            ) as usize;
+            // Maximum startline position that makes sense - we want visible code but within limits of the source code height
+            let mut maximum_viable_startline =
+                min(focused_line as i32 - grace_lines, maximum_startline) as usize;
+            // Sometimes, towards end of file, maximum and minim viable lines have swapped values.
+            // No idea why, but swapping them helps the problem.
+            if minimum_viable_startline > maximum_viable_startline {
+                minimum_viable_startline ^= maximum_viable_startline;
+                maximum_viable_startline ^= minimum_viable_startline;
+                minimum_viable_startline ^= maximum_viable_startline;
+            }
+            // Try to keep previous startline as it was, but scroll up or down as
+            // little as possible to keep within bonds
+            if previous_startline < minimum_viable_startline {
+                display_start = minimum_viable_startline;
+            } else if previous_startline > maximum_viable_startline {
+                display_start = maximum_viable_startline;
+            } else {
+                display_start = previous_startline;
+            }
+            draw_memory.current_startline = display_start;
+        }
+
         // TODO: Implement scrolling
         // Define closure that prints one more line of source code
         let mut add_new_line = |line_number| {
@@ -180,7 +225,7 @@ impl Tui {
             }
             text_output.push(Text::raw("\n"));
         };
-        for number in 0..source_code.len() {
+        for number in display_start..source_code.len() {
             add_new_line(number);
         }
         // Add one more "phantom" line so we see line where current segment execution ends
@@ -267,6 +312,8 @@ impl UiAgent for Tui {
         });
 
         self.terminal.clear();
+        let mut use_execution_pointer_as_focus_line = false;
+        let mut draw_memory: DrawMemory = DrawMemory::default();
 
         // UI thread that manages drawing
         loop {
@@ -293,6 +340,7 @@ impl UiAgent for Tui {
                                 self.cursor += 1;
                             }
                         }
+                        use_execution_pointer_as_focus_line = false;
                         self.pressed_keys_buffer.clear();
                     }
                     // Move cursor up
@@ -304,24 +352,30 @@ impl UiAgent for Tui {
                                 self.cursor -= 1;
                             }
                         }
+                        use_execution_pointer_as_focus_line = false;
                         self.pressed_keys_buffer.clear();
                     }
                     // Go to top of file
                     KeyCode::Char('g') => {
                         self.cursor = 0;
+                        use_execution_pointer_as_focus_line = false;
                         self.pressed_keys_buffer.clear();
                     }
                     // Go to bottom of file
                     KeyCode::Char('G') => {
                         self.cursor = debugger.source_code.len();
+                        use_execution_pointer_as_focus_line = false;
                         self.pressed_keys_buffer.clear();
                     }
                     // Toggle breakpoint on current line
                     KeyCode::Char('b') => {
-                        let breakpoint_target = Tui::get_pressed_key_buffer_as_number(
-                            &self.pressed_keys_buffer,
-                            self.cursor,
-                        );
+                        let mut breakpoint_target =
+                            Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 0);
+                        if breakpoint_target == 0 {
+                            breakpoint_target = self.cursor;
+                        } else {
+                            breakpoint_target -= 1;
+                        }
                         if self.breakpoints.contains(&breakpoint_target) {
                             self.breakpoints.remove(&breakpoint_target);
                         } else {
@@ -338,6 +392,7 @@ impl UiAgent for Tui {
                                 current_state = newstate;
                             }
                         }
+                        use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     }
                     // Step backwards
@@ -349,6 +404,7 @@ impl UiAgent for Tui {
                                 current_state = prevstate;
                             }
                         }
+                        use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     }
                     // Run till end or breakpoint
@@ -361,6 +417,7 @@ impl UiAgent for Tui {
                         } else {
                             break;
                         }
+                        use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     },
                     KeyCode::Char(other) => match other {
@@ -379,10 +436,25 @@ impl UiAgent for Tui {
                 Interrupt::IntervalElapsed => {}
             }
             // Draw
-            let bp = &self.breakpoints;
-            let c = self.cursor;
+            let breakpoints = &self.breakpoints;
+            let cursor = self.cursor;
             self.terminal
-                .draw(|mut f| Tui::draw(&mut f, debugger, &current_state, &bp, c, line_number, c))
+                .draw(|mut f| {
+                    Tui::draw(
+                        &mut f,
+                        debugger,
+                        &current_state,
+                        &breakpoints,
+                        cursor,
+                        line_number,
+                        if use_execution_pointer_as_focus_line {
+                            line_number
+                        } else {
+                            cursor
+                        },
+                        &mut draw_memory,
+                    )
+                })
                 .unwrap();
         }
     }
@@ -392,4 +464,17 @@ impl UiAgent for Tui {
 enum Interrupt {
     UserEvent(KeyEvent),
     IntervalElapsed,
+}
+
+/// This is currently used to remember last scroll
+/// position so screen doesn't wiggle as much.
+struct DrawMemory {
+    current_startline: usize,
+}
+impl DrawMemory {
+    fn default() -> Self {
+        DrawMemory {
+            current_startline: 0,
+        }
+    }
 }
