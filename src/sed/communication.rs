@@ -146,25 +146,47 @@ impl SedCommunicator {
         let mut previous_output = None;
         // If true, we're currently parsing `MATCHED REGEX REGISTERS`, which lasts several lines.
         let mut currently_loading_regex_matches: bool = false;
+        // If true, we're currently parsing `MATCHED REGEX REGISTERS`, but one of the regexes spans
+        // multiple lines. Keep loading it.
+        let mut currently_loading_multiline_regex_match: bool = false;
+        // Was the last substitution since last command successful?
         let mut substitution_successful: bool = false;
 
         // TODO: Multiline regexes are not displayed correctly and will fall to output instead. FIXME!!
         for line in lines {
             // If we are trying to parse regexe matches, do so
             if currently_loading_regex_matches {
+                if currently_loading_multiline_regex_match {
+                    if line.starts_with("  regex[") {
+                        // We PROBABLY have new regex now. There is no way to know for sure.
+                        // Just carry on.
+                        currently_loading_regex_matches = false;
+                    } else {
+                        let last_regex_idx = regex_registers.len() - 1;
+                        regex_registers
+                            .get_mut(last_regex_idx)
+                            .unwrap()
+                            .push_str(line);
+                    }
+                }
                 match line {
                     x if x.starts_with("  ") => {
-                        let mut rest_of_regex: String = String::from(
+                        let rest_of_regex: String = String::from(
                             x.chars()
                                 .skip_while(|c| *c != '=')
                                 .skip(1)
                                 .collect::<String>()
                                 .trim(),
                         );
+                        // If the regex didn't end, start loading it as multiline regex.
+                        // We don't have a way to know this for sure, just guessing.
+                        if !&rest_of_regex.ends_with("'") {
+                            currently_loading_multiline_regex_match = true;
+                        }
                         regex_registers.push(rest_of_regex);
                         substitution_successful = true;
                     }
-                    x => {
+                    _ => {
                         currently_loading_regex_matches = false;
                     }
                 }
