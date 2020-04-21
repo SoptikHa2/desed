@@ -334,6 +334,9 @@ impl UiAgent for Tui {
                     KeyCode::Char('q') => {
                         // Terminal might go crazy if we don't switch the mode back
                         crossterm::terminal::disable_raw_mode();
+                        // Disable our weird mouse handling so we don't break mouse handling of parent terminal
+                        let mut stdout = io::stdout();
+                        stdout.queue(event::DisableMouseCapture);
                         return Ok(());
                     }
                     // Move cursor down
