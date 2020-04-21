@@ -11,7 +11,7 @@ impl SedCommunicator {
     pub fn new(options: Options) -> Self {
         SedCommunicator { options }
     }
-    pub fn getExecutionInfoFromSed(&self) -> Result<DebugInfoFromSed, String> {
+    pub fn get_execution_info_from_sed(&self) -> Result<DebugInfoFromSed, String> {
         let output = self.get_sed_output()?;
 
         let program_source = self.parse_program_source(&output);
@@ -273,6 +273,15 @@ impl SedCommunicator {
                 }
             }
         }
+
+        result.push(DebuggingState {
+            pattern_buffer: String::from(current_pattern),
+            hold_buffer: String::from(current_hold),
+            current_line: sed_line,
+            matched_regex_registers: regex_registers,
+            output: previous_output,
+            sed_command: None,
+        });
 
         result
     }
