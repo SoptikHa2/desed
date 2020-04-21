@@ -179,8 +179,10 @@ impl Tui {
                 minimum_startline,
             ) as usize;
             // Maximum startline position that makes sense - we want visible code but within limits of the source code height
-            let mut maximum_viable_startline =
-                min(focused_line as i32 - grace_lines, maximum_startline) as usize;
+            let mut maximum_viable_startline = max(
+                min(focused_line as i32 - grace_lines, maximum_startline),
+                minimum_startline,
+            ) as usize;
             // Sometimes, towards end of file, maximum and minim viable lines have swapped values.
             // No idea why, but swapping them helps the problem.
             if minimum_viable_startline > maximum_viable_startline {
