@@ -20,7 +20,7 @@ pub struct Debugger {
     ///
     /// See `history_limit` for maximum debugging states stored.
     /// We rotate them afterwards.
-    state_frames: Vec<DebuggingState>,
+    pub state_frames: Vec<DebuggingState>,
     current_frame: usize,
 }
 impl Debugger {
@@ -87,7 +87,7 @@ impl Debugger {
 /// One state of sed program execution.
 ///
 /// Remembers state of sed program execution.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DebuggingState {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,

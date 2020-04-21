@@ -31,6 +31,11 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
             .help("sed: separate lines by NUL characters")
             .takes_value(false)
             .required(false))
+        .arg(Arg::with_name("debug")
+            .long("debug")
+            .help("Do not debug sed program but rather debug this debugger. This will self-diagnose to stdout and print detailed info to stderr. Use redirection for verbosity control.")
+            .takes_value(false)
+            .required(false))
         .arg(Arg::with_name("sed-script")
             .help("Input file with sed script")
             .required(true)
@@ -50,6 +55,7 @@ pub struct Options {
     pub sed_script: PathBuf,
     pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
+    pub debug: bool,
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
@@ -64,6 +70,7 @@ impl Options {
         };
 
         let mut sed_parameters: Vec<String> = Vec::with_capacity(4);
+        let mut debug = false;
 
         if matches.is_present("sed_n") {
             sed_parameters.push(String::from("-n"));
@@ -77,11 +84,15 @@ impl Options {
         if matches.is_present("sed_z") {
             sed_parameters.push(String::from("-z"));
         }
+        if matches.is_present("debug") {
+            debug = true;
+        }
 
         Ok(Options {
             sed_script,
             input_file,
             sed_parameters,
+            debug,
         })
     }
 }
