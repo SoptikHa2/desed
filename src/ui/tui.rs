@@ -425,6 +425,18 @@ impl UiAgent for Tui {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     },
+                    KeyCode::Char('R') => loop {
+                        if let Some(newstate) = debugger.previous_state() {
+                            current_state = newstate;
+                            if self.breakpoints.contains(&current_state.current_line) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                        use_execution_pointer_as_focus_line = true;
+                        self.pressed_keys_buffer.clear();
+                    },
                     KeyCode::Char(other) => match other {
                         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                             self.pressed_keys_buffer.push(other);
