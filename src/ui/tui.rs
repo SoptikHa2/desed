@@ -467,11 +467,13 @@ impl UiAgent for Tui {
                         if self.cursor > 0 {
                             self.cursor -= 1;
                         }
+                        use_execution_pointer_as_focus_line = false;
                     }
                     MouseEvent::ScrollDown(_col, _row, _key_modifiers) => {
                         if self.cursor < debugger.source_code.len() {
                             self.cursor += 1;
                         }
+                        use_execution_pointer_as_focus_line = false;
                     }
                     _ => {}
                 },
