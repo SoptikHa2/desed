@@ -3,7 +3,7 @@ Demystify and debug your sed scripts, from comfort of your terminal.
 
 ![desed usage example](img/desed.gif)
 
-Desed is a command line tool with beautiful TUI that provides users with comfartable interface and practical debugger, used to step through complex sed scripts.
+Desed is a command line tool with beautiful TUI that provides users with comfortable interface and practical debugger, used to step through complex sed scripts.
 
 Some of the notable features include:
 
