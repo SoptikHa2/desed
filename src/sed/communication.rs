@@ -14,7 +14,11 @@ impl SedCommunicator {
         let output = self.get_sed_output()?;
 
         let program_source = self.parse_program_source(&output);
-        unimplemented!();
+        let frames = self.parse_state_frames(&output);
+        return Ok(DebugInfoFromSed {
+            program_source,
+            states: frames,
+        });
     }
     fn get_sed_output(&self) -> Result<String, String> {
         let sed_debug_command = Command::new("sed")
@@ -58,6 +62,7 @@ impl SedCommunicator {
         sed_output
             .lines()
             .skip_while(|line| *line != "SED PROGRAM:")
+            .skip(1)
             .take_while(|line| line.starts_with("  "))
             .map(|line| String::from(line.trim()))
             .collect()
@@ -220,7 +225,8 @@ impl SedCommunicator {
 
     /// Guess next command position.
     fn next_line_position(&self, current_position: usize, current_command: &str) -> usize {
-        unimplemented!();
+        // TODO: Handle jumps
+        return current_position + 1;
     }
 }
 

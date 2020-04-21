@@ -20,6 +20,7 @@ pub struct Debugger {
     /// See `history_limit` for maximum debugging states stored.
     /// We rotate them afterwards.
     state_frames: Vec<DebuggingState>,
+    current_frame: usize,
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.
@@ -29,6 +30,7 @@ impl Debugger {
         Ok(Debugger {
             source_code: data.program_source,
             state_frames: data.states,
+            current_frame: 0,
         })
     }
     /// Create new instance of debugger with mock data.
@@ -42,6 +44,7 @@ impl Debugger {
                 .map(|s| String::from(*s))
                 .collect(),
             state_frames: Vec::new(),
+            current_frame: 1,
         })
     }
     /// Create new instance of debugging state with mock data.
@@ -64,21 +67,36 @@ impl Debugger {
     /// Go to next sed execution step.
     ///
     /// This might return None if we reached end of execution.
-    pub fn next_state(&self) -> Option<DebuggingState> {
-        unimplemented!();
+    pub fn next_state(&mut self) -> Option<DebuggingState> {
+        if self.current_frame >= self.state_frames.len() {
+            return None;
+        }
+        self.current_frame += 1;
+        // TODO: Solve this without cloning. This is awful.
+        self.state_frames
+            .get(self.current_frame - 1)
+            .map(|s| s.clone())
     }
     /// Go to previous sed execution step as saved in memory.
     ///
     /// This might return None if we are at start of execution or
     /// if there no longer any states left in history.
-    pub fn previous_state(&self) -> Option<DebuggingState> {
-        unimplemented!();
+    pub fn previous_state(&mut self) -> Option<DebuggingState> {
+        if self.current_frame == 0 {
+            return None;
+        }
+        self.current_frame -= 1;
+        // TODO: Solve this without cloning. This is awful.
+        self.state_frames
+            .get(self.current_frame + 1)
+            .map(|s| s.clone())
     }
 }
 
 /// One state of sed program execution.
 ///
 /// Remembers state of sed program execution.
+#[derive(Clone)]
 pub struct DebuggingState {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,

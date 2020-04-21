@@ -171,7 +171,7 @@ impl Tui {
         } else {
             for (i, m) in regex_space.iter().enumerate() {
                 text.push(Text::styled(
-                    format!("\n\\{}    ", i),
+                    format!("\n\\{}    ", (i + 1)),
                     Style::default().fg(Color::DarkGray),
                 ));
                 text.push(Text::raw(m));
@@ -232,7 +232,7 @@ impl UiAgent for Tui {
 
         // UI thread that manages drawing
         loop {
-            let debugger = &self.debugger;
+            let debugger = &mut self.debugger;
             let line_number = current_state.current_line;
             // Wait for interrupt
             match rx.recv().unwrap() {
@@ -277,19 +277,19 @@ impl UiAgent for Tui {
                     }
                     // Step forward
                     KeyCode::Char('s') => {
-                        if let Some(newstate) = self.debugger.next_state() {
+                        if let Some(newstate) = debugger.next_state() {
                             current_state = newstate;
                         }
                     }
                     // Step backwards
                     KeyCode::Char('a') => {
-                        if let Some(prevstate) = self.debugger.previous_state() {
+                        if let Some(prevstate) = debugger.previous_state() {
                             current_state = prevstate;
                         }
                     }
                     // Run till end or breakpoint
                     KeyCode::Char('r') => loop {
-                        let mut newstate = self.debugger.next_state();
+                        let mut newstate = debugger.next_state();
                         if let Some(newstate) = newstate {
                             if self.breakpoints.contains(&newstate.current_line) {
                                 break;
