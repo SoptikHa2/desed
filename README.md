@@ -1,7 +1,7 @@
 # Desed
 Demystify and debug your sed scripts, from comfort of your terminal.
 
-TODO: Gif
+![desed usage example](img/desed.gif)
 
 Desed is a command line tool with beautiful TUI that provides users with comfartable interface and practical debugger, used to step through complex sed scripts.
 
