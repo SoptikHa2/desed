@@ -32,7 +32,7 @@ cargo install desed
 
 Development: `rust`, `cargo`
 
-Runtime: `sed` (GNU version)
+Runtime: `sed` (GNU version, >= 4.6)
 
 ## Controls
 
