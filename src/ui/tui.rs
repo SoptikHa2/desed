@@ -183,7 +183,6 @@ impl Tui {
         for number in 0..source_code.len() {
             add_new_line(number);
         }
-        // TODO: Do this only when we scrolled down and see end of file
         // Add one more "phantom" line so we see line where current segment execution ends
         add_new_line(source_code.len());
         let paragraph = Paragraph::new(text_output.iter())
@@ -278,7 +277,6 @@ impl UiAgent for Tui {
                 // Handle user input. Vi-like controls are available,
                 // including prefixing a command with number to execute it
                 // multiple times (in case of breakpoint toggles breakpoint on given line).
-                // TODO: Add vi-like number command prefixing
                 Interrupt::UserEvent(event) => match event.code {
                     // Exit
                     KeyCode::Char('q') => {
