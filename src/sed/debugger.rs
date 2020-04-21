@@ -106,7 +106,8 @@ pub struct DebuggingState {
     /// wil be saved here. If the previously executed instruction was not a substitution,
     /// this will be empty.
     pub matched_regex_registers: Vec<String>,
-    pub output: Option<String>,
+    /// Output of sed command. Each vec item means one line.
+    pub output: Option<Vec<String>>,
     /// References current instruction in source code. This is computed heuristically
     /// and is not retrieved from inner sed state. So this might in some cases be wrong.
     /// If that's the case, file a bug.

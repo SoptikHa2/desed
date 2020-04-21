@@ -136,7 +136,8 @@ impl SedCommunicator {
         let mut regex_registers: Vec<String> = Vec::new();
         // If sed printed any output because of last command, what was it
         let mut previous_output = None;
-        // If true, we're currently parsing `MATCHED REGEX REGISTERS`, which lasts several lines
+        // If true, we're currently parsing `MATCHED REGEX REGISTERS`, which lasts several lines.
+        // There may even be one regex parsed over multiple lines.
         let mut currently_loading_regex_matches: bool = false;
 
         for line in lines {
@@ -215,7 +216,12 @@ impl SedCommunicator {
                 }
                 x => {
                     // Assume this is returned value
-                    previous_output = Some(String::from(x));
+                    if let Some(output) = &mut previous_output {
+                        output.push(String::from(x));
+                    } else {
+                        previous_output = Some(Vec::new());
+                        previous_output.as_mut().unwrap().push(String::from(x));
+                    }
                 }
             }
         }
