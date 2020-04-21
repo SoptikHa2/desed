@@ -26,6 +26,11 @@ pub struct Tui {
     /// means that the application is refreshed at least once every
     /// 100 milliseconds.
     forced_refresh_rate: u64,
+    /// Pressed keys that should be stored but can't be processed now.
+    /// For example, user can press "10k". The "1" and "0" are important and should
+    /// be stored, but can't be executed because we don't know what to do (move up) until
+    /// we see the "k" character. The instant we see it, we read the whole buffer and clear it.
+    pressed_keys_buffer: String,
 }
 impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
@@ -40,7 +45,24 @@ impl Tui {
             breakpoints: HashSet::new(),
             cursor: 0,
             forced_refresh_rate: 200,
+            pressed_keys_buffer: String::new(),
         })
+    }
+
+    /// Reads given buffer and returns it as a number.
+    ///
+    /// A default value will be return if the number is non-parsable (typically empty buffer) or is
+    /// not at least 1.
+    fn get_pressed_key_buffer_as_number(buffer: &String, default_value: usize) -> usize {
+        if let Ok(num) = buffer.parse() {
+            if num >= 1 {
+                num
+            } else {
+                default_value
+            }
+        } else {
+            default_value
+        }
     }
 
     /// Generate layout and call individual draw methods for each layout part.
@@ -266,43 +288,70 @@ impl UiAgent for Tui {
                     }
                     // Move cursor down
                     KeyCode::Char('j') | KeyCode::Down => {
-                        if self.cursor < debugger.source_code.len() {
-                            self.cursor += 1;
+                        for _ in
+                            0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
+                        {
+                            if self.cursor < debugger.source_code.len() {
+                                self.cursor += 1;
+                            }
                         }
+                        self.pressed_keys_buffer.clear();
                     }
                     // Move cursor up
                     KeyCode::Char('k') | KeyCode::Up => {
-                        if self.cursor > 0 {
-                            self.cursor -= 1;
+                        for _ in
+                            0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
+                        {
+                            if self.cursor > 0 {
+                                self.cursor -= 1;
+                            }
                         }
+                        self.pressed_keys_buffer.clear();
                     }
                     // Go to top of file
                     KeyCode::Char('g') => {
                         self.cursor = 0;
+                        self.pressed_keys_buffer.clear();
                     }
                     // Go to bottom of file
                     KeyCode::Char('G') => {
                         self.cursor = debugger.source_code.len();
+                        self.pressed_keys_buffer.clear();
                     }
                     // Toggle breakpoint on current line
                     KeyCode::Char('b') => {
-                        if self.breakpoints.contains(&self.cursor) {
-                            self.breakpoints.remove(&self.cursor);
+                        let breakpoint_target = Tui::get_pressed_key_buffer_as_number(
+                            &self.pressed_keys_buffer,
+                            self.cursor,
+                        );
+                        if self.breakpoints.contains(&breakpoint_target) {
+                            self.breakpoints.remove(&breakpoint_target);
                         } else {
-                            self.breakpoints.insert(self.cursor);
+                            self.breakpoints.insert(breakpoint_target);
                         }
+                        self.pressed_keys_buffer.clear();
                     }
                     // Step forward
                     KeyCode::Char('s') => {
-                        if let Some(newstate) = debugger.next_state() {
-                            current_state = newstate;
+                        for _ in
+                            0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
+                        {
+                            if let Some(newstate) = debugger.next_state() {
+                                current_state = newstate;
+                            }
                         }
+                        self.pressed_keys_buffer.clear();
                     }
                     // Step backwards
                     KeyCode::Char('a') => {
-                        if let Some(prevstate) = debugger.previous_state() {
-                            current_state = prevstate;
+                        for _ in
+                            0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
+                        {
+                            if let Some(prevstate) = debugger.previous_state() {
+                                current_state = prevstate;
+                            }
                         }
+                        self.pressed_keys_buffer.clear();
                     }
                     // Run till end or breakpoint
                     KeyCode::Char('r') => loop {
@@ -314,9 +363,20 @@ impl UiAgent for Tui {
                         } else {
                             break;
                         }
+                        self.pressed_keys_buffer.clear();
                     },
-                    // TODO: handle other keycodes (particulary numbers)
-                    other => {}
+                    KeyCode::Char(other) => match other {
+                        '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                            self.pressed_keys_buffer.push(other);
+                        }
+                        _ => {
+                            // Invalid key, clear buffer
+                            self.pressed_keys_buffer.clear();
+                        }
+                    },
+                    _ => {
+                        self.pressed_keys_buffer.clear();
+                    }
                 },
                 Interrupt::IntervalElapsed => {}
             }
