@@ -12,7 +12,7 @@ Some of the notable features include:
 - Step through sed script - both forward and backwards!
 - Place breakpoints and examine program state
 - Hot reload and see what changes as you edit source code
-- It's name is a palindrome
+- Its name is a palindrome
 
 ## Install
 
