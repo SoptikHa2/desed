@@ -63,7 +63,7 @@ impl Debugger {
     ///
     /// This might return None if we reached end of execution.
     pub fn next_state(&mut self) -> Option<DebuggingState> {
-        if self.current_frame >= self.state_frames.len() {
+        if self.current_frame >= self.state_frames.len() - 1 {
             return None;
         }
         self.current_frame += 1;
