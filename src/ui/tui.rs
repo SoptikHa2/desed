@@ -304,13 +304,19 @@ impl UiAgent for Tui {
                     // Send interrupt
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
-                        tx.send(Interrupt::KeyPressed(key)).unwrap();
+                        if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
+                            return;
+                        }
                     } else if let Event::Mouse(mouse) = event {
-                        tx.send(Interrupt::MouseEvent(mouse)).unwrap();
+                        if let Err(_) = tx.send(Interrupt::MouseEvent(mouse)) {
+                            return;
+                        }
                     }
                 }
                 if last_tick.elapsed() > tick_rate {
-                    tx.send(Interrupt::IntervalElapsed).unwrap();
+                    if let Err(_) = tx.send(Interrupt::IntervalElapsed) {
+                        return;
+                    }
                     last_tick = Instant::now();
                 }
             }
