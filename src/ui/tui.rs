@@ -1,10 +1,13 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
-use crossterm::QueueableCommand;
+use crossterm::{
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+};
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use std::io::{self};
+use std::io::{self, Write};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -37,7 +40,8 @@ pub struct Tui {
 impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
         let mut stdout = io::stdout();
-        stdout.queue(event::EnableMouseCapture);
+        execute!(stdout, EnterAlternateScreen);
+        execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
         crossterm::terminal::enable_raw_mode();
@@ -283,6 +287,22 @@ impl Tui {
         let paragraph = Paragraph::new(text.iter()).block(block).wrap(true);
         f.render_widget(paragraph, area);
     }
+
+    /// Use crossterm and stdout to restore terminal state.
+    ///
+    /// This shall be called on application exit.
+    pub fn restore_terminal_state() {
+        let mut stdout = io::stdout();
+        // Disable mouse control
+        execute!(stdout, event::DisableMouseCapture);
+        // Leave alternate screen that we used to not mess with user's terminal
+        execute!(stdout, LeaveAlternateScreen);
+        // Disable raw mode that messes up with user's terminal and show cursor again
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.show_cursor();
+        crossterm::terminal::disable_raw_mode();
+    }
 }
 
 impl UiAgent for Tui {
@@ -338,11 +358,7 @@ impl UiAgent for Tui {
                 Interrupt::KeyPressed(event) => match event.code {
                     // Exit
                     KeyCode::Char('q') => {
-                        // Terminal might go crazy if we don't switch the mode back
-                        crossterm::terminal::disable_raw_mode();
-                        // Disable our weird mouse handling so we don't break mouse handling of parent terminal
-                        let mut stdout = io::stdout();
-                        stdout.queue(event::DisableMouseCapture);
+                        // Leave alternate screen, so we don't mess up user's terminal
                         return Ok(ApplicationExitReason::UserExit);
                     }
                     // Move cursor down

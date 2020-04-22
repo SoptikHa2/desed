@@ -1,15 +1,16 @@
 mod sed;
 use sed::debugger::Debugger;
-use sed::debugger::DebuggingState;
 mod cli;
 mod ui;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
 
 fn main() {
+    // Enter alternate screen that we will to not mess with user's terminal
     if let Err(error) = run(0) {
         eprintln!("An error occured: {}", error);
     }
+    Tui::restore_terminal_state();
 }
 
 /// Debug application and start at specified
