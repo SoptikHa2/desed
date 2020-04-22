@@ -332,7 +332,7 @@ impl SedCommunicator {
                 let rest = x[1..].trim();
                 if rest == "" {
                     // Jump to end of script
-                    lines_of_code - 1
+                    lines_of_code
                 } else if let Some(target) = label_jump_map.get(rest) {
                     // Jump to target label
                     *target
@@ -351,7 +351,7 @@ impl SedCommunicator {
                     let rest = x[1..].trim();
                     if rest == "" {
                         // jump to end of script
-                        lines_of_code - 1
+                        lines_of_code
                     } else if let Some(target) = label_jump_map.get(rest) {
                         // Jump to target label
                         *target
