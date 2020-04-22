@@ -1,10 +1,7 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
-use crossterm::{
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
-};
+use crossterm::execute;
 use std::cmp::{max, min};
 use std::collections::HashSet;
 use std::io::{self, Write};
@@ -40,7 +37,6 @@ pub struct Tui {
 impl Tui {
     pub fn new(debugger: Debugger) -> Result<Self, String> {
         let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen);
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
@@ -295,8 +291,6 @@ impl Tui {
         let mut stdout = io::stdout();
         // Disable mouse control
         execute!(stdout, event::DisableMouseCapture);
-        // Leave alternate screen that we used to not mess with user's terminal
-        execute!(stdout, LeaveAlternateScreen);
         // Disable raw mode that messes up with user's terminal and show cursor again
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
