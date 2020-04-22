@@ -11,7 +11,7 @@ impl SedCommunicator {
     pub fn new(options: Options) -> Self {
         SedCommunicator { options }
     }
-    pub fn get_execution_info_from_sed(&self) -> Result<DebugInfoFromSed, String> {
+    pub fn get_execution_info_from_sed(&mut self) -> Result<DebugInfoFromSed, String> {
         let output = self.get_sed_output()?;
 
         let program_source = self.parse_program_source(&output);
@@ -23,7 +23,12 @@ impl SedCommunicator {
             last_output: frames.1,
         });
     }
-    fn get_sed_output(&self) -> Result<String, String> {
+    fn get_sed_output(&mut self) -> Result<String, String> {
+        let mut path_to_be_used: &String = &String::from("sed");
+        if let Some(path) = &self.options.sed_path {
+            path_to_be_used = path;
+        }
+
         let mandatory_parameters = vec![
             "--debug",
             "-f",
@@ -43,7 +48,7 @@ impl SedCommunicator {
             .map(|s| s.as_str())
             .chain(mandatory_parameters.iter().map(|s| *s))
             .collect::<Vec<&str>>();
-        let sed_debug_command = Command::new(&self.options.sed_path)
+        let sed_debug_command = Command::new(path_to_be_used)
             .args(&constructed_cmd_line)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -51,16 +56,31 @@ impl SedCommunicator {
             .output()
             .ok()
             .ok_or(
-                format!("Sed failed to process your script. Are you using GNU sed? If so, please report the bug.\nINFO: Sed was called using \"{} {}\"", &self.options.sed_path, constructed_cmd_line.join(" ")),
+                format!("[Error] Sed failed to start. Are you using GNU sed? Is the path correct?\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")),
             )?
             .stdout;
 
         if self.options.debug {
             eprintln!(
-                "[Info] Called sed with \"{} {}\"",
-                self.options.sed_path,
-                constructed_cmd_line.join(" ")
+                "[Info] Called sed with \"{} {}\", which returned {} lines of output.",
+                path_to_be_used,
+                constructed_cmd_line.join(" "),
+                sed_debug_command.len()
             );
+        }
+
+        // If sed returned no output (so it failed) and sed
+        // path wasn't specified by user,
+        // change executing path to "gsed" and try again.
+        if self.options.sed_path.is_none() {
+            self.options.sed_path = Some(String::from("gsed"));
+            if self.options.debug {
+                eprintln!(
+                    "[Info] Sed failed and didn't return any output. As sed path wasn't specified, trying again with \"gsed\". If even that won't work, make sure \
+                            sed is able to process your script. Most common mistake is forgeting to use -E."
+                );
+            }
+            return self.get_sed_output();
         }
 
         Ok(String::from_utf8(sed_debug_command).ok().ok_or(String::from("String received from sed doesn't seem to be UTF-8. If this continues to happen, please report the bug."))?)
