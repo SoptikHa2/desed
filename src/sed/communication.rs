@@ -72,7 +72,7 @@ impl SedCommunicator {
         // If sed returned no output (so it failed) and sed
         // path wasn't specified by user,
         // change executing path to "gsed" and try again.
-        if self.options.sed_path.is_none() {
+        if self.options.sed_path.is_none() && sed_debug_command.len() == 0 {
             self.options.sed_path = Some(String::from("gsed"));
             if self.options.debug {
                 eprintln!(
