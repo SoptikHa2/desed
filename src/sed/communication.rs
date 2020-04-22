@@ -179,7 +179,7 @@ impl SedCommunicator {
         // If true, we're currently parsing `MATCHED REGEX REGISTERS`, but one of the regexes spans
         // multiple lines. Keep loading it.
         let mut currently_loading_multiline_regex_match: bool = false;
-        // Was the last substitution since last command successful?
+        // Was any substitution since last command successful?
         let mut substitution_successful: bool = false;
 
         // TODO: Multiline regexes are not displayed correctly and will fall to output instead. FIXME!!
@@ -267,7 +267,11 @@ impl SedCommunicator {
                     // Clear old info, such as output
                     previous_output = None;
                     regex_registers = Vec::new();
-                    substitution_successful = false;
+
+                    // If the command is t or T, clear substitution_successful
+                    if current_command.starts_with("t") || current_command.starts_with("T") {
+                        substitution_successful = false;
+                    }
                 }
                 x if x.starts_with("MATCHED REGEX REGISTERS") => {
                     currently_loading_regex_matches = true;
