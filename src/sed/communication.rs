@@ -74,12 +74,10 @@ impl SedCommunicator {
         // change executing path to "gsed" and try again.
         if self.options.sed_path.is_none() && sed_debug_command.len() == 0 {
             self.options.sed_path = Some(String::from("gsed"));
-            if self.options.debug {
-                eprintln!(
+            eprintln!(
                     "[Info] Sed failed and didn't return any output. As sed path wasn't specified, trying again with \"gsed\". If even that won't work, make sure \
                             sed is able to process your script. Most common mistake is forgeting to use -E."
                 );
-            }
             return self.get_sed_output();
         }
 
