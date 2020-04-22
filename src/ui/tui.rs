@@ -358,7 +358,6 @@ impl UiAgent for Tui {
                 Interrupt::KeyPressed(event) => match event.code {
                     // Exit
                     KeyCode::Char('q') => {
-                        // Leave alternate screen, so we don't mess up user's terminal
                         return Ok(ApplicationExitReason::UserExit);
                     }
                     // Move cursor down

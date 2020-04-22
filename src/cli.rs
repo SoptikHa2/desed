@@ -50,7 +50,19 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
             .help("File with data for sed to process.")
             .required(true)
             .index(2))
-        .after_help("EXAMPLE:\n\n\tdesed increment-number.sed test-suite.txt\n\t\tRuns script stored in increment-number.sed with input in test-suite.txt\n\n\tdesed print-matching.sed test-cases.txt -nE\n\t\tRuns script in .sed file with input in .txt file and parameters -n -E to launched sed")
+        .after_help("EXAMPLE:\
+            \n\tdesed increment-number.sed test-suite.txt\n\t\tRuns script stored in increment-number.sed with input in test-suite.txt\
+            \n\n\tdesed print-matching.sed test-cases.txt -nE\n\t\tRuns script in .sed file with input in .txt file and parameters -n -E to launched sed\n\n\
+        CONTROLS:\
+            \n\tMouse scroll, j, k, g, G (just as in vi): scroll through file\
+            \n\tMouse click, b: toggle breakpoint on target line\
+            \n\ts: Step forward\
+            \n\ta: step bAckwards\
+            \n\tr: run towards end or next breakpoint\
+            \n\tR: the same as r, but backwards\
+            \n\tl: instantly reload source code and attempt to stay in the same state you were in\
+            \n\tq: quit\
+            \n\tYou can prefix most commands with numbers, just as in vi.")
         .get_matches();
     Options::from_matches(matches)
 }
