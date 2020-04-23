@@ -10,4 +10,5 @@ Cargo.lock
 **/*.rs.bk
 
 # AUR package files - stored in AUR repository
-aur
+aur/desed
+aur/desed-git
