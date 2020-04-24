@@ -34,7 +34,7 @@ Use precompiled binaries: see [releases](https://github.com/SoptikHa2/desed/rele
 
 ### Dependencies:
 
-Development: `rust`, `cargo`
+Development: `rust`, `cargo` (>= 1.38.0)
 
 Runtime: `sed` (GNU version, >= 4.6) (desed works on BSD if you installed `gsed`)
 
