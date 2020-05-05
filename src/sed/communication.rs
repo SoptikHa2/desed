@@ -95,7 +95,7 @@ impl SedCommunicator {
             .lines()
             .skip_while(|line| *line != "SED PROGRAM:")
             .skip(1)
-            .take_while(|line| line.starts_with("  "))
+            .take_while(|line| !line.starts_with("INPUT:   '"))
             .map(|line| String::from(line.trim()))
             .collect()
     }
