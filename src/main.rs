@@ -6,7 +6,6 @@ use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
 
 fn main() {
-    // Enter alternate screen that we will to not mess with user's terminal
     if let Err(error) = run(0) {
         eprintln!("An error occured: {}", error);
     }
