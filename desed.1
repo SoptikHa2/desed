@@ -1,0 +1,73 @@
+.TH DESED 1 "2020-05-15" "" "User Commands"
+.SH NAME
+\fBdesed\fR \- TUI debugger for sed scripts
+.
+.SH SYNOPSIS
+.SY desed
+[\fIOPTIONS\fR]
+.I SED_SCRIPT
+.I INPUT_FILE
+.YS
+.
+.SH DESCRIPTION
+\fBdesed\fR is a command line tool with beautiful TUI that provides users
+with a comfortable interface and a practical debugger,
+used to step through complex sed scripts.
+.
+.SH OPTIONS
+As \fBdesed\fR operates by running \fBsed\fR internally,
+instead of connecting to a "live" instance, some of the program options are
+used to control the behaviour the internal \fBsed\fR instance.
+.
+.SS sed options
+.TP
+\fB\-n\fR, \fB\-\-silent\fR, \fB\-\-quiet\fR
+Suppress automatic printing of pattern space.
+.TP
+\fB\-E\fR, \fB\-\-regexp-extended\fR
+Use extended regular expressions in the script.
+.TP
+.B \-\-sandbox
+Operate in sandbox mode (disable \fBe\fR/\fBr\fR/\fBw\fR commands).
+.TP
+\fB\-z\fR, \fB\-\-null\-data\fR
+Separate lines by NUL characters.
+.
+.SS desed options
+.TP
+.B \-\-debug
+Do not debug the \fBsed\fR script, but rather debug \fBdesed\fR itself.
+This will enable various debug printing to stderr.
+.TP
+\fB\-\-sed-path\fR \fIEXECUTABLE\fR
+Instead of the system-wide \fBsed\fR install, use \fIEXECUTABLE\fR instead.
+.
+.SH CONTROLS
+.TP
+\fBj\fR, \fBk\fR, \fBg, \fBG
+Movement, just as in \fBvim\fR.
+.TP
+.B b
+Toggle breakpoint.
+.TP
+\fBs\fR, \fBa\fR
+Step forward / backwards.
+.TP
+.B r
+Run to next breakpoint or end of script.
+.TP
+.B R
+The same as \fBr\fR, but backwards.
+.TP
+.B l
+Reload code and continue debugging in the same place as before.
+.TP
+.B q
+Quit.
+.PP
+Similar to \fBvim\fR, most commands can be prefixed with numbers.
+The mouse can also be used to scroll through the script and toggle breakpoints.
+.
+.SH LICENCE
+\fBdesed\fR is available under the terms of the GNU General Public License,
+version 3 or any later version, as published by the Free Software Foundation.
