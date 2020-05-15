@@ -17,7 +17,7 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
         .arg(Arg::with_name("sed_E")
             .short("E")
             .long("regexp-extended")
-            .help("sed: use extended regular epxressions in the script")
+            .help("sed: use extended regular expressions in the script")
             .takes_value(false)
             .required(false))
         .arg(Arg::with_name("sed_sandbox")
