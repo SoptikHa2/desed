@@ -16,21 +16,33 @@ Some of the notable features include:
 
 ## Install
 
-From source:
+### Arch Linux
+
+Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
+
+### Fedora
+
+```sh
+sudo dnf install desed
 ```
+
+### Source
+
+```sh
 git clone https://github.com/soptikha2/desed
 cd desed
 cargo install --path .
 ```
 
-From cargo:
+### Cargo
+
 ```
 cargo install desed
 ```
 
-Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
+### Precompiled binaries
 
-Use precompiled binaries: see [releases](https://github.com/SoptikHa2/desed/releases).
+See [releases](https://github.com/SoptikHa2/desed/releases).
 
 ### Dependencies:
 
