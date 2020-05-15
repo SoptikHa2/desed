@@ -32,6 +32,12 @@ dnf install desed
 pkg install desed
 ```
 
+### Void Linux
+
+```sh
+xbps-install -S desed
+```
+
 ### Source
 
 ```sh
