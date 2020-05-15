@@ -23,7 +23,13 @@ Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](h
 ### Fedora
 
 ```sh
-sudo dnf install desed
+dnf install desed
+```
+
+### FreeBSD
+
+```sh
+pkg install desed
 ```
 
 ### Source
@@ -32,6 +38,7 @@ sudo dnf install desed
 git clone https://github.com/soptikha2/desed
 cd desed
 cargo install --path .
+cp "desed.1" "$(manpath | cut -d':' -f1)/man1"
 ```
 
 ### Cargo
