@@ -1,4 +1,4 @@
-.TH DESED 1 "2020-05-15" "" "User Commands"
+.TH DESED 1 "2020-06-05" "" "User Commands"
 .SH NAME
 \fBdesed\fR \- TUI debugger for sed scripts
 .
@@ -67,6 +67,17 @@ Quit.
 .PP
 Similar to \fBvim\fR, most commands can be prefixed with numbers.
 The mouse can also be used to scroll through the script and toggle breakpoints.
+.SH BUGS
+.
+Report all bugs at https://github.com/SoptikHa2/desed.
+I know about the bugs that happen when sed script contains newlines.
+Sed parsing that causes this is currently under rewrite.
+.SH AUTHOR
+Petr Šťastný <desed@soptik.tech> (from 2020-04-20) and plenty of others, from
+fixing typos to helping getting it to run under BSD. See repository for full list.
+.
+.SH SEE ALSO
+sed(1)
 .
 .SH LICENCE
 \fBdesed\fR is available under the terms of the GNU General Public License,
