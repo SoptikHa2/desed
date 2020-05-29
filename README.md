@@ -96,3 +96,7 @@ Because it's the standard stream editor for filtering and transforming text. And
 ## What is the roadmap for future updates?
 
 I would like to introduce syntax highlighting and add this tool to standard repositories of all major distributions.
+
+## Is this a joke?
+
+I thought it was. But apparently it's actually useful for some people.
