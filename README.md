@@ -20,6 +20,12 @@ Some of the notable features include:
 
 Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
 
+### DragonFly BSD
+
+```sh
+pkg install desed
+```
+
 ### Fedora
 
 ```sh
