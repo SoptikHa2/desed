@@ -5,7 +5,7 @@ use std::str::FromStr;
 pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
     let matches = App::new("Desed")
         .version(crate_version!())
-        .author("Petr Šťastný <petr.stastny01@gmail.com>")
+        .author("Petr Šťastný <desed@soptik.tech>")
         .about("Sed script debugger. Debug and demystify your sed scripts with TUI debugger.")
         .arg(Arg::with_name("sed_n")
             .short("n")
