@@ -79,9 +79,10 @@ pub struct Options {
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options> {
+        // UNWRAP: It's safe because we define sed-script in the CLI code above, so we are certain it exists.
         let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap())
             .with_context(|| "Failed to load sed script path")?;
-
+        // UNWRAP: It's safe because we define input-file in the CLI code above, so we are certain it exists.
         let input_file: PathBuf = PathBuf::from_str(matches.value_of("input-file").unwrap())
             .with_context(|| "Failed to load input file path.")?;
 

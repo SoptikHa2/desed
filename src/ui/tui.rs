@@ -301,17 +301,18 @@ impl Tui {
     #[allow(unused_must_use)]
     // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
     // but we try to restore as much as we can.
-    pub fn restore_terminal_state() {
+    pub fn restore_terminal_state() -> Result<()> {
         let mut stdout = io::stdout();
         // Disable mouse control
         execute!(stdout, event::DisableMouseCapture);
         // Disable raw mode that messes up with user's terminal and show cursor again
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.show_cursor();
         crossterm::terminal::disable_raw_mode();
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.show_cursor();
         // And clear as much as we can before handing the control of terminal back to user.
         terminal.clear();
+        Ok(())
     }
 }
 
@@ -330,8 +331,12 @@ impl UiAgent for Tui {
             let mut last_tick = Instant::now();
             loop {
                 // Oh we got an event from user
+                // UNWRAP: We need to use it because I don't know how to return Result
+                // from this, and I doubt it can even be done.
                 if event::poll(tick_rate - last_tick.elapsed()).unwrap() {
                     // Send interrupt
+                    // UNWRAP: We are guaranteed that the following call will succeed
+                    // as we know there already something waiting for us (see event::poll)
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
                         if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
@@ -361,7 +366,7 @@ impl UiAgent for Tui {
             let debugger = &mut self.debugger;
             let line_number = current_state.current_line;
             // Wait for interrupt
-            match rx.recv().unwrap() {
+            match rx.recv()? {
                 // Handle user input. Vi-like controls are available,
                 // including prefixing a command with number to execute it
                 // multiple times (in case of breakpoint toggles breakpoint on given line).
