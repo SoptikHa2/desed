@@ -2,9 +2,9 @@ mod sed;
 use sed::debugger::Debugger;
 mod cli;
 mod ui;
+use anyhow::Result;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
-use anyhow::Result;
 
 fn main() {
     if let Err(error) = run(0) {

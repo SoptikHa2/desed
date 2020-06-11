@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::path::PathBuf;
 use std::str::FromStr;
-use anyhow::{Result, Context};
 
 pub fn parse_arguments<'a, 'b>() -> Result<Options> {
     let matches = App::new("Desed")
@@ -32,9 +32,10 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options> {
             .help("sed: separate lines by NUL characters")
             .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("debug")
-            .long("debug")
-            .help("Do not debug sed program but rather debug this debugger. This will enable various debug printing to stderr.")
+        .arg(Arg::with_name("verbose")
+            .long("verbose")
+            .short("v")
+            .help("This will enable various debug printing to stderr.")
             .takes_value(false)
             .required(false))
         .arg(Arg::with_name("sed-path")
@@ -73,14 +74,16 @@ pub struct Options {
     pub sed_script: PathBuf,
     pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
-    pub debug: bool,
+    pub verbose: bool,
     pub sed_path: Option<String>,
 }
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options> {
-        let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap()).with_context(|| "Failed to load sed script path")?;
+        let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap())
+            .with_context(|| "Failed to load sed script path")?;
 
-        let input_file: PathBuf =  PathBuf::from_str(matches.value_of("input-file").unwrap()).with_context(|| "Failed to load input file path.")?;
+        let input_file: PathBuf = PathBuf::from_str(matches.value_of("input-file").unwrap())
+            .with_context(|| "Failed to load input file path.")?;
 
         let sed_path: Option<String> = matches.value_of("sed-path").map(|s| String::from(s));
 
@@ -99,7 +102,7 @@ impl Options {
         if matches.is_present("sed_z") {
             sed_parameters.push(String::from("-z"));
         }
-        if matches.is_present("debug") {
+        if matches.is_present("verbose") {
             debug = true;
         }
 
@@ -108,7 +111,7 @@ impl Options {
             sed_path,
             input_file,
             sed_parameters,
-            debug,
+            verbose: debug,
         })
     }
 }

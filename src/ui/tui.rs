@@ -1,5 +1,6 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
+use anyhow::{Context, Result};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
 use crossterm::execute;
 use std::cmp::{max, min};
@@ -14,7 +15,6 @@ use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
 use tui::widgets::{Block, Borders, Paragraph, Text};
 use tui::Terminal;
-use anyhow::{Context, Result};
 
 pub struct Tui {
     debugger: Debugger,
@@ -503,23 +503,22 @@ impl UiAgent for Tui {
             // Draw
             let breakpoints = &self.breakpoints;
             let cursor = self.cursor;
-            self.terminal
-                .draw(|mut f| {
-                    Tui::draw(
-                        &mut f,
-                        debugger,
-                        &current_state,
-                        &breakpoints,
-                        cursor,
-                        line_number,
-                        if use_execution_pointer_as_focus_line {
-                            line_number
-                        } else {
-                            cursor
-                        },
-                        &mut draw_memory,
-                    )
-                })?
+            self.terminal.draw(|mut f| {
+                Tui::draw(
+                    &mut f,
+                    debugger,
+                    &current_state,
+                    &breakpoints,
+                    cursor,
+                    line_number,
+                    if use_execution_pointer_as_focus_line {
+                        line_number
+                    } else {
+                        cursor
+                    },
+                    &mut draw_memory,
+                )
+            })?
         }
     }
 }
