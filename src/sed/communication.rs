@@ -2,6 +2,7 @@ use super::debugger::DebuggingState;
 use crate::cli::Options;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
+use anyhow::{Context, Result};
 
 /// This handles communication with GNU sed.
 pub struct SedCommunicator {
@@ -11,7 +12,7 @@ impl SedCommunicator {
     pub fn new(options: Options) -> Self {
         SedCommunicator { options }
     }
-    pub fn get_execution_info_from_sed(&mut self) -> Result<DebugInfoFromSed, String> {
+    pub fn get_execution_info_from_sed(&mut self) -> Result<DebugInfoFromSed> {
         let output = self.get_sed_output()?;
 
         let program_source = self.parse_program_source(&output);
@@ -23,7 +24,7 @@ impl SedCommunicator {
             last_output: frames.1,
         });
     }
-    fn get_sed_output(&mut self) -> Result<String, String> {
+    fn get_sed_output(&mut self) -> Result<String> {
         let mut path_to_be_used: &String = &String::from("sed");
         if let Some(path) = &self.options.sed_path {
             path_to_be_used = path;
@@ -35,11 +36,11 @@ impl SedCommunicator {
             self.options
                 .sed_script
                 .to_str()
-                .ok_or(String::from("Invalid sed script path. Is it valid UTF-8?"))?,
+                .with_context(||format!("Invalid sed script path. Is it valid UTF-8?"))?,
             self.options
                 .input_file
                 .to_str()
-                .ok_or(String::from("Invalid input path. Is it valid UTF-8?"))?,
+                .with_context(||format!("Invalid input path. Is it valid UTF-8?"))?,
         ];
         let constructed_cmd_line = self
             .options
@@ -55,8 +56,8 @@ impl SedCommunicator {
             .stderr(Stdio::inherit())
             .output()
             .ok()
-            .ok_or(
-                format!("[Error] Sed failed to start. Are you using GNU sed? Is the path correct?\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")),
+            .with_context(
+                || format!("[Error] Sed failed to start. Are you using GNU sed? Is the path correct?\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")),
             )?
             .stdout;
 
@@ -81,7 +82,7 @@ impl SedCommunicator {
             return self.get_sed_output();
         }
 
-        Ok(String::from_utf8(sed_debug_command).ok().ok_or(String::from("String received from sed doesn't seem to be UTF-8. If this continues to happen, please report the bug."))?)
+        Ok(String::from_utf8(sed_debug_command).with_context(|| "String received from sed doesn't seem to be UTF-8. If this continues to happen, please report the bug.")?)
     }
 
     /// Wait for line that looks like "SED PROGRAM:"

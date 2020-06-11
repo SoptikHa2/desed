@@ -4,6 +4,7 @@ mod cli;
 mod ui;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
+use anyhow::Result;
 
 fn main() {
     if let Err(error) = run(0) {
@@ -14,7 +15,7 @@ fn main() {
 
 /// Debug application and start at specified
 /// state if possible
-fn run(target_state_number: usize) -> Result<(), String> {
+fn run(target_state_number: usize) -> Result<()> {
     let settings = cli::parse_arguments()?;
     let mut debugger = Debugger::new(settings)?;
     for _ in 0..target_state_number {

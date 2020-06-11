@@ -18,3 +18,5 @@ clap = "2.33.0"
 # TUI
 crossterm = "0.17.3"
 tui = {  version = "0.9.1", default-features = false, features = ["crossterm"] }
+# Flexible error handling
+anyhow = "1.0.31"

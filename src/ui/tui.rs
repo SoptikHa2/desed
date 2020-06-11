@@ -14,6 +14,7 @@ use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
 use tui::widgets::{Block, Borders, Paragraph, Text};
 use tui::Terminal;
+use anyhow::{Context, Result};
 
 pub struct Tui {
     debugger: Debugger,
@@ -35,13 +36,13 @@ pub struct Tui {
     pressed_keys_buffer: String,
 }
 impl Tui {
-    pub fn new(debugger: Debugger) -> Result<Self, String> {
+    pub fn new(debugger: Debugger) -> Result<Self> {
         let mut stdout = io::stdout();
-        execute!(stdout, event::EnableMouseCapture);
+        execute!(stdout, event::EnableMouseCapture)?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
-        crossterm::terminal::enable_raw_mode();
-        terminal.hide_cursor();
+        crossterm::terminal::enable_raw_mode()?;
+        terminal.hide_cursor()?;
         Ok(Tui {
             debugger,
             terminal,
@@ -300,8 +301,8 @@ impl Tui {
 }
 
 impl UiAgent for Tui {
-    fn start(mut self) -> std::result::Result<ApplicationExitReason, std::string::String> {
-        let mut current_state = self.debugger.current_state().ok_or(String::from(
+    fn start(mut self) -> Result<ApplicationExitReason> {
+        let mut current_state = self.debugger.current_state().with_context(||format!(
             "It looks like the source code loaded was empty. Nothing to do. Are you sure sed can process the file? Make sure you didn't forget the -E option.",
         ))?;
 
@@ -518,8 +519,7 @@ impl UiAgent for Tui {
                         },
                         &mut draw_memory,
                     )
-                })
-                .unwrap();
+                })?
         }
     }
 }

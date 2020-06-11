@@ -1,8 +1,9 @@
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::path::PathBuf;
 use std::str::FromStr;
+use anyhow::{Result, Context};
 
-pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
+pub fn parse_arguments<'a, 'b>() -> Result<Options> {
     let matches = App::new("Desed")
         .version(crate_version!())
         .author("Petr Šťastný <desed@soptik.tech>")
@@ -76,16 +77,10 @@ pub struct Options {
     pub sed_path: Option<String>,
 }
 impl Options {
-    pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
-        let sed_script: PathBuf = match PathBuf::from_str(matches.value_of("sed-script").unwrap()) {
-            Ok(x) => x,
-            Err(_) => return Err(String::from("Failed to load sed script path.")),
-        };
+    pub fn from_matches(matches: ArgMatches) -> Result<Options> {
+        let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap()).with_context(|| "Failed to load sed script path")?;
 
-        let input_file: PathBuf = match PathBuf::from_str(matches.value_of("input-file").unwrap()) {
-            Ok(x) => x,
-            Err(_) => return Err(String::from("Failed to load input file path.")),
-        };
+        let input_file: PathBuf =  PathBuf::from_str(matches.value_of("input-file").unwrap()).with_context(|| "Failed to load input file path.")?;
 
         let sed_path: Option<String> = matches.value_of("sed-path").map(|s| String::from(s));
 

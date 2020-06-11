@@ -1,8 +1,10 @@
+use anyhow::Result;
+
 /// This trait describes structure that takes care of
 /// interacting with user.
 pub trait UiAgent {
     /// Start the agent that will now take over.
-    fn start(self) -> Result<ApplicationExitReason, String>;
+    fn start(self) -> Result<ApplicationExitReason>;
 }
 
 /// Used to indicate why did UiAgent stop
