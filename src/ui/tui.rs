@@ -37,7 +37,7 @@ pub struct Tui {
 }
 impl Tui {
     /// Create new TUI that gathers data from the debugger.
-    /// 
+    ///
     /// This consumes the debugger, as it's used to advance debugging state.
     #[allow(unused_must_use)]
     // NOTE: We don't care that some actions here fail (for example mouse handling),
@@ -46,7 +46,8 @@ impl Tui {
         let mut stdout = io::stdout();
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).with_context(||"Failed to initialize terminal with crossterm backend.")?;
+        let mut terminal = Terminal::new(backend)
+            .with_context(|| "Failed to initialize terminal with crossterm backend.")?;
         crossterm::terminal::enable_raw_mode()?;
         terminal.hide_cursor();
         Ok(Tui {
@@ -357,7 +358,9 @@ impl UiAgent for Tui {
             }
         });
 
-        self.terminal.clear().with_context(||"Failed to clear terminal during drawing state. Do you have modern term?")?;
+        self.terminal.clear().with_context(|| {
+            "Failed to clear terminal during drawing state. Do you have modern term?"
+        })?;
         let mut use_execution_pointer_as_focus_line = false;
         let mut draw_memory: DrawMemory = DrawMemory::default();
 
