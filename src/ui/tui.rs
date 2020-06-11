@@ -36,13 +36,19 @@ pub struct Tui {
     pressed_keys_buffer: String,
 }
 impl Tui {
+    /// Create new TUI that gathers data from the debugger.
+    /// 
+    /// This consumes the debugger, as it's used to advance debugging state.
+    #[allow(unused_must_use)]
+    // NOTE: We don't care that some actions here fail (for example mouse handling),
+    // as some features that we're trying to enable here are not necessary for desed.
     pub fn new(debugger: Debugger) -> Result<Self> {
         let mut stdout = io::stdout();
-        execute!(stdout, event::EnableMouseCapture)?;
+        execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
+        let mut terminal = Terminal::new(backend).with_context(||"Failed to initialize terminal with crossterm backend.")?;
         crossterm::terminal::enable_raw_mode()?;
-        terminal.hide_cursor()?;
+        terminal.hide_cursor();
         Ok(Tui {
             debugger,
             terminal,
@@ -204,21 +210,25 @@ impl Tui {
 
         // Define closure that prints one more line of source code
         let mut add_new_line = |line_number| {
+            // Define colors depending whether currently selected line has a breakpoint
             let linenr_color = if breakpoints.contains(&line_number) {
                 Color::LightRed
             } else {
                 Color::Yellow
             };
+            // Define background color depending on whether we have cursor here
             let linenr_bg_color = if line_number == cursor {
                 Color::DarkGray
             } else {
                 Color::Reset
             };
+            // Format line indicator. It's different if the currently executing line is here
             let linenr_format = if line_number == interpreter_line {
                 format!("{: <3}▶", (line_number + 1))
             } else {
                 format!("{: <4}", (line_number + 1))
             };
+            // Send the line we defined earlier to be displayed
             text_output.push(Text::styled(
                 linenr_format,
                 Style::default().fg(linenr_color).bg(linenr_bg_color),
@@ -288,6 +298,9 @@ impl Tui {
     /// Use crossterm and stdout to restore terminal state.
     ///
     /// This shall be called on application exit.
+    #[allow(unused_must_use)]
+    // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
+    // but we try to restore as much as we can.
     pub fn restore_terminal_state() {
         let mut stdout = io::stdout();
         // Disable mouse control
@@ -337,7 +350,7 @@ impl UiAgent for Tui {
             }
         });
 
-        self.terminal.clear();
+        self.terminal.clear().with_context(||"Failed to clear terminal during drawing state. Do you have modern term?")?;
         let mut use_execution_pointer_as_focus_line = false;
         let mut draw_memory: DrawMemory = DrawMemory::default();
 
