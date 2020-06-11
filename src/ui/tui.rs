@@ -76,7 +76,7 @@ impl Tui {
     }
 
     /// Generate layout and call individual draw methods for each layout part.
-    fn draw<B: Backend>(
+    fn draw_layout_and_subcomponents<B: Backend>(
         f: &mut Frame<B>,
         debugger: &Debugger,
         state: &DebuggingState,
@@ -310,6 +310,8 @@ impl Tui {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.show_cursor();
         crossterm::terminal::disable_raw_mode();
+        // And clear as much as we can before handing the control of terminal back to user.
+        terminal.clear();
     }
 }
 
@@ -517,7 +519,7 @@ impl UiAgent for Tui {
             let breakpoints = &self.breakpoints;
             let cursor = self.cursor;
             self.terminal.draw(|mut f| {
-                Tui::draw(
+                Tui::draw_layout_and_subcomponents(
                     &mut f,
                     debugger,
                     &current_state,
