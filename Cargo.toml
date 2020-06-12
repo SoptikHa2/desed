@@ -20,3 +20,5 @@ logos = "0.11.4"
 # TUI
 crossterm = "0.17.4"
 tui = {  version = "0.9.4", default-features = false, features = ["crossterm"] }
+# Flexible error handling
+anyhow = "1.0.31"

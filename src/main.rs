@@ -2,6 +2,7 @@ mod sed;
 use sed::debugger::Debugger;
 mod cli;
 mod ui;
+use anyhow::Result;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
 
@@ -9,18 +10,17 @@ fn main() {
     if let Err(error) = run(0) {
         eprintln!("An error occured: {}", error);
     }
-    Tui::restore_terminal_state();
+    if let Err(error) = Tui::restore_terminal_state() {
+        eprintln!("An error occured while attempting to reset terminal to previous state. Consider using 'reset' command. Error: {}", error);
+    }
 }
 
 /// Debug application and start at specified
 /// state if possible
-fn run(target_state_number: usize) -> Result<(), String> {
+fn run(target_state_number: usize) -> Result<()> {
     let settings = cli::parse_arguments()?;
-    let mut debugger = Debugger::new(settings)?;
-    for _ in 0..target_state_number {
-        debugger.next_state();
-    }
-    let tui = Tui::new(debugger)?;
+    let debugger = Debugger::new(settings)?;
+    let tui = Tui::new(&debugger, target_state_number)?;
     match tui.start()? {
         ApplicationExitReason::UserExit => {
             return Ok(());

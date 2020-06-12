@@ -1,5 +1,6 @@
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
+use anyhow::{Context, Result};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
 use crossterm::execute;
 use std::cmp::{max, min};
@@ -15,10 +16,12 @@ use tui::terminal::Frame;
 use tui::widgets::{Block, Borders, Paragraph, Text};
 use tui::Terminal;
 
-pub struct Tui {
-    debugger: Debugger,
+pub struct Tui<'a> {
+    debugger: &'a Debugger,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    /// Collection of lines which are designated as breakpoints
     breakpoints: HashSet<usize>,
+    /// Remembers which line has user selected (has cursor on).
     cursor: usize,
     /// UI is refreshed automatically on user input.
     /// However if no user input arrives, how often should
@@ -33,14 +36,23 @@ pub struct Tui {
     /// be stored, but can't be executed because we don't know what to do (move up) until
     /// we see the "k" character. The instant we see it, we read the whole buffer and clear it.
     pressed_keys_buffer: String,
+    /// Remembers at which state are we currently. User can step back and forth.
+    current_state: usize,
 }
-impl Tui {
-    pub fn new(debugger: Debugger) -> Result<Self, String> {
+impl<'a> Tui<'a> {
+    /// Create new TUI that gathers data from the debugger.
+    ///
+    /// This consumes the debugger, as it's used to advance debugging state.
+    #[allow(unused_must_use)]
+    // NOTE: We don't care that some actions here fail (for example mouse handling),
+    // as some features that we're trying to enable here are not necessary for desed.
+    pub fn new(debugger: &'a Debugger, current_state: usize) -> Result<Self> {
         let mut stdout = io::stdout();
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
-        crossterm::terminal::enable_raw_mode();
+        let mut terminal = Terminal::new(backend)
+            .with_context(|| "Failed to initialize terminal with crossterm backend.")?;
+        crossterm::terminal::enable_raw_mode()?;
         terminal.hide_cursor();
         Ok(Tui {
             debugger,
@@ -49,6 +61,7 @@ impl Tui {
             cursor: 0,
             forced_refresh_rate: 200,
             pressed_keys_buffer: String::new(),
+            current_state
         })
     }
 
@@ -69,7 +82,7 @@ impl Tui {
     }
 
     /// Generate layout and call individual draw methods for each layout part.
-    fn draw<B: Backend>(
+    fn draw_layout_and_subcomponents<B: Backend>(
         f: &mut Frame<B>,
         debugger: &Debugger,
         state: &DebuggingState,
@@ -203,21 +216,25 @@ impl Tui {
 
         // Define closure that prints one more line of source code
         let mut add_new_line = |line_number| {
+            // Define colors depending whether currently selected line has a breakpoint
             let linenr_color = if breakpoints.contains(&line_number) {
                 Color::LightRed
             } else {
                 Color::Yellow
             };
+            // Define background color depending on whether we have cursor here
             let linenr_bg_color = if line_number == cursor {
                 Color::DarkGray
             } else {
                 Color::Reset
             };
+            // Format line indicator. It's different if the currently executing line is here
             let linenr_format = if line_number == interpreter_line {
                 format!("{: <3}▶", (line_number + 1))
             } else {
                 format!("{: <4}", (line_number + 1))
             };
+            // Send the line we defined earlier to be displayed
             text_output.push(Text::styled(
                 linenr_format,
                 Style::default().fg(linenr_color).bg(linenr_bg_color),
@@ -287,24 +304,26 @@ impl Tui {
     /// Use crossterm and stdout to restore terminal state.
     ///
     /// This shall be called on application exit.
-    pub fn restore_terminal_state() {
+    #[allow(unused_must_use)]
+    // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
+    // but we try to restore as much as we can.
+    pub fn restore_terminal_state() -> Result<()> {
         let mut stdout = io::stdout();
         // Disable mouse control
         execute!(stdout, event::DisableMouseCapture);
         // Disable raw mode that messes up with user's terminal and show cursor again
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.show_cursor();
         crossterm::terminal::disable_raw_mode();
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.show_cursor();
+        // And clear as much as we can before handing the control of terminal back to user.
+        terminal.clear();
+        Ok(())
     }
 }
 
-impl UiAgent for Tui {
-    fn start(mut self) -> std::result::Result<ApplicationExitReason, std::string::String> {
-        let mut current_state = self.debugger.current_state().ok_or(String::from(
-            "It looks like the source code loaded was empty. Nothing to do. Are you sure sed can process the file? Make sure you didn't forget the -E option.",
-        ))?;
-
+impl<'a> UiAgent for Tui<'a> {
+    fn start(mut self) -> Result<ApplicationExitReason> {
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(self.forced_refresh_rate);
@@ -314,8 +333,12 @@ impl UiAgent for Tui {
             let mut last_tick = Instant::now();
             loop {
                 // Oh we got an event from user
+                // UNWRAP: We need to use it because I don't know how to return Result
+                // from this, and I doubt it can even be done.
                 if event::poll(tick_rate - last_tick.elapsed()).unwrap() {
                     // Send interrupt
+                    // UNWRAP: We are guaranteed that the following call will succeed
+                    // as we know there already something waiting for us (see event::poll)
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
                         if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
@@ -336,16 +359,20 @@ impl UiAgent for Tui {
             }
         });
 
-        self.terminal.clear();
+        self.terminal.clear().with_context(|| {
+            "Failed to clear terminal during drawing state. Do you have modern term?"
+        })?;
         let mut use_execution_pointer_as_focus_line = false;
         let mut draw_memory: DrawMemory = DrawMemory::default();
 
         // UI thread that manages drawing
         loop {
-            let debugger = &mut self.debugger;
+            let current_state = self.debugger.peek_at_state(self.current_state)
+                .with_context(||"We got ourselves into impossible state. This is logical error, please report a bug.")?;
+            let debugger = &self.debugger;
             let line_number = current_state.current_line;
             // Wait for interrupt
-            match rx.recv().unwrap() {
+            match rx.recv()? {
                 // Handle user input. Vi-like controls are available,
                 // including prefixing a command with number to execute it
                 // multiple times (in case of breakpoint toggles breakpoint on given line).
@@ -411,8 +438,8 @@ impl UiAgent for Tui {
                         for _ in
                             0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
                         {
-                            if let Some(newstate) = debugger.next_state() {
-                                current_state = newstate;
+                            if self.current_state < debugger.count_of_states() - 1 {
+                                self.current_state += 1;
                             }
                         }
                         use_execution_pointer_as_focus_line = true;
@@ -423,42 +450,38 @@ impl UiAgent for Tui {
                         for _ in
                             0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
                         {
-                            if let Some(prevstate) = debugger.previous_state() {
-                                current_state = prevstate;
+                            if self.current_state > 0 {
+                                self.current_state -= 1;
                             }
                         }
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     }
                     // Run till end or breakpoint
-                    KeyCode::Char('r') => loop {
-                        if let Some(newstate) = debugger.next_state() {
-                            current_state = newstate;
-                            if self.breakpoints.contains(&current_state.current_line) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
+                    KeyCode::Char('r') => {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
+                        while self.current_state < debugger.count_of_states() - 1 {
+                            self.current_state += 1;
+                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                                break;
+                            }
+                        }
                     },
                     // Same as 'r', but backwards
-                    KeyCode::Char('R') => loop {
-                        if let Some(newstate) = debugger.previous_state() {
-                            current_state = newstate;
-                            if self.breakpoints.contains(&current_state.current_line) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
+                    KeyCode::Char('R') => {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
+                        while self.current_state > 0 {
+                            self.current_state -= 1;
+                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                                break;
+                            }
+                        }
                     },
                     // Reload source code and try to enter current state again
                     KeyCode::Char('l') => {
-                        return Ok(ApplicationExitReason::Reload(self.debugger.current_frame));
+                        return Ok(ApplicationExitReason::Reload(self.current_state));
                     }
                     KeyCode::Char(other) => match other {
                         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
@@ -502,24 +525,22 @@ impl UiAgent for Tui {
             // Draw
             let breakpoints = &self.breakpoints;
             let cursor = self.cursor;
-            self.terminal
-                .draw(|mut f| {
-                    Tui::draw(
-                        &mut f,
-                        debugger,
-                        &current_state,
-                        &breakpoints,
-                        cursor,
-                        line_number,
-                        if use_execution_pointer_as_focus_line {
-                            line_number
-                        } else {
-                            cursor
-                        },
-                        &mut draw_memory,
-                    )
-                })
-                .unwrap();
+            self.terminal.draw(|mut f| {
+                Tui::draw_layout_and_subcomponents(
+                    &mut f,
+                    debugger,
+                    &current_state,
+                    &breakpoints,
+                    cursor,
+                    line_number,
+                    if use_execution_pointer_as_focus_line {
+                        line_number
+                    } else {
+                        cursor
+                    },
+                    &mut draw_memory,
+                )
+            })?
         }
     }
 }

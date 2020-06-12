@@ -1,11 +1,12 @@
+use anyhow::{Context, Result};
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
+pub fn parse_arguments<'a, 'b>() -> Result<Options> {
     let matches = App::new("Desed")
         .version(crate_version!())
-        .author("Petr Šťastný <petr.stastny01@gmail.com>")
+        .author("Petr Šťastný <desed@soptik.tech>")
         .about("Sed script debugger. Debug and demystify your sed scripts with TUI debugger.")
         .arg(Arg::with_name("sed_n")
             .short("n")
@@ -17,7 +18,7 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
         .arg(Arg::with_name("sed_E")
             .short("E")
             .long("regexp-extended")
-            .help("sed: use extended regular epxressions in the script")
+            .help("sed: use extended regular expressions in the script")
             .takes_value(false)
             .required(false))
         .arg(Arg::with_name("sed_sandbox")
@@ -31,9 +32,10 @@ pub fn parse_arguments<'a, 'b>() -> Result<Options, String> {
             .help("sed: separate lines by NUL characters")
             .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("debug")
-            .long("debug")
-            .help("Do not debug sed program but rather debug this debugger. This will enable various debug printing to stderr.")
+        .arg(Arg::with_name("verbose")
+            .long("verbose")
+            .short("v")
+            .help("This will enable various debug printing to stderr.")
             .takes_value(false)
             .required(false))
         .arg(Arg::with_name("sed-path")
@@ -72,20 +74,17 @@ pub struct Options {
     pub sed_script: PathBuf,
     pub input_file: PathBuf,
     pub sed_parameters: Vec<String>,
-    pub debug: bool,
+    pub verbose: bool,
     pub sed_path: Option<String>,
 }
 impl Options {
-    pub fn from_matches(matches: ArgMatches) -> Result<Options, String> {
-        let sed_script: PathBuf = match PathBuf::from_str(matches.value_of("sed-script").unwrap()) {
-            Ok(x) => x,
-            Err(_) => return Err(String::from("Failed to load sed script path.")),
-        };
-
-        let input_file: PathBuf = match PathBuf::from_str(matches.value_of("input-file").unwrap()) {
-            Ok(x) => x,
-            Err(_) => return Err(String::from("Failed to load input file path.")),
-        };
+    pub fn from_matches(matches: ArgMatches) -> Result<Options> {
+        // UNWRAP: It's safe because we define sed-script in the CLI code above, so we are certain it exists.
+        let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap())
+            .with_context(|| "Failed to load sed script path")?;
+        // UNWRAP: It's safe because we define input-file in the CLI code above, so we are certain it exists.
+        let input_file: PathBuf = PathBuf::from_str(matches.value_of("input-file").unwrap())
+            .with_context(|| "Failed to load input file path.")?;
 
         let sed_path: Option<String> = matches.value_of("sed-path").map(|s| String::from(s));
 
@@ -104,7 +103,7 @@ impl Options {
         if matches.is_present("sed_z") {
             sed_parameters.push(String::from("-z"));
         }
-        if matches.is_present("debug") {
+        if matches.is_present("verbose") {
             debug = true;
         }
 
@@ -113,7 +112,7 @@ impl Options {
             sed_path,
             input_file,
             sed_parameters,
-            debug,
+            verbose: debug,
         })
     }
 }

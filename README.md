@@ -16,21 +16,52 @@ Some of the notable features include:
 
 ## Install
 
-From source:
+### Arch Linux
+
+Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
+
+### DragonFly BSD
+
+```sh
+pkg install desed
 ```
+
+### Fedora
+
+```sh
+dnf install desed
+```
+
+### FreeBSD
+
+```sh
+pkg install desed
+```
+
+### Void Linux
+
+```sh
+xbps-install -S desed
+```
+
+### Source
+
+```sh
 git clone https://github.com/soptikha2/desed
 cd desed
 cargo install --path .
+cp "desed.1" "$(manpath | cut -d':' -f1)/man1"
 ```
 
-From cargo:
+### Cargo
+
 ```
 cargo install desed
 ```
 
-Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
+### Precompiled binaries
 
-Use precompiled binaries: see [releases](https://github.com/SoptikHa2/desed/releases).
+See [releases](https://github.com/SoptikHa2/desed/releases).
 
 ### Dependencies:
 
@@ -71,3 +102,7 @@ Because it's the standard stream editor for filtering and transforming text. And
 ## What is the roadmap for future updates?
 
 I would like to introduce syntax highlighting and add this tool to standard repositories of all major distributions.
+
+## Is this a joke?
+
+I thought it was. But apparently it's actually useful for some people.
