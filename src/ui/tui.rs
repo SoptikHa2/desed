@@ -16,10 +16,12 @@ use tui::terminal::Frame;
 use tui::widgets::{Block, Borders, Paragraph, Text};
 use tui::Terminal;
 
-pub struct Tui {
-    debugger: Debugger,
+pub struct Tui<'a> {
+    debugger: &'a Debugger,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    /// Collection of lines which are designated as breakpoints
     breakpoints: HashSet<usize>,
+    /// Remembers which line has user selected (has cursor on).
     cursor: usize,
     /// UI is refreshed automatically on user input.
     /// However if no user input arrives, how often should
@@ -34,15 +36,17 @@ pub struct Tui {
     /// be stored, but can't be executed because we don't know what to do (move up) until
     /// we see the "k" character. The instant we see it, we read the whole buffer and clear it.
     pressed_keys_buffer: String,
+    /// Remembers at which state are we currently. User can step back and forth.
+    current_state: usize,
 }
-impl Tui {
+impl<'a> Tui<'a> {
     /// Create new TUI that gathers data from the debugger.
     ///
     /// This consumes the debugger, as it's used to advance debugging state.
     #[allow(unused_must_use)]
     // NOTE: We don't care that some actions here fail (for example mouse handling),
     // as some features that we're trying to enable here are not necessary for desed.
-    pub fn new(debugger: Debugger) -> Result<Self> {
+    pub fn new(debugger: &'a Debugger, current_state: usize) -> Result<Self> {
         let mut stdout = io::stdout();
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
@@ -57,6 +61,7 @@ impl Tui {
             cursor: 0,
             forced_refresh_rate: 200,
             pressed_keys_buffer: String::new(),
+            current_state
         })
     }
 
@@ -317,12 +322,8 @@ impl Tui {
     }
 }
 
-impl UiAgent for Tui {
+impl<'a> UiAgent for Tui<'a> {
     fn start(mut self) -> Result<ApplicationExitReason> {
-        let mut current_state = self.debugger.current_state().with_context(||format!(
-            "It looks like the source code loaded was empty. Nothing to do. Are you sure sed can process the file? Make sure you didn't forget the -E option.",
-        ))?;
-
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(self.forced_refresh_rate);
@@ -366,7 +367,9 @@ impl UiAgent for Tui {
 
         // UI thread that manages drawing
         loop {
-            let debugger = &mut self.debugger;
+            let current_state = self.debugger.peek_at_state(self.current_state)
+                .with_context(||"We got ourselves into impossible state. This is logical error, please report a bug.")?;
+            let debugger = &self.debugger;
             let line_number = current_state.current_line;
             // Wait for interrupt
             match rx.recv()? {
@@ -435,8 +438,8 @@ impl UiAgent for Tui {
                         for _ in
                             0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
                         {
-                            if let Some(newstate) = debugger.next_state() {
-                                current_state = newstate;
+                            if self.current_state < debugger.count_of_states() - 1 {
+                                self.current_state += 1;
                             }
                         }
                         use_execution_pointer_as_focus_line = true;
@@ -447,42 +450,38 @@ impl UiAgent for Tui {
                         for _ in
                             0..Tui::get_pressed_key_buffer_as_number(&self.pressed_keys_buffer, 1)
                         {
-                            if let Some(prevstate) = debugger.previous_state() {
-                                current_state = prevstate;
+                            if self.current_state > 0 {
+                                self.current_state -= 1;
                             }
                         }
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                     }
                     // Run till end or breakpoint
-                    KeyCode::Char('r') => loop {
-                        if let Some(newstate) = debugger.next_state() {
-                            current_state = newstate;
-                            if self.breakpoints.contains(&current_state.current_line) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
+                    KeyCode::Char('r') => {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
+                        while self.current_state < debugger.count_of_states() - 1 {
+                            self.current_state += 1;
+                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                                break;
+                            }
+                        }
                     },
                     // Same as 'r', but backwards
-                    KeyCode::Char('R') => loop {
-                        if let Some(newstate) = debugger.previous_state() {
-                            current_state = newstate;
-                            if self.breakpoints.contains(&current_state.current_line) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
+                    KeyCode::Char('R') => {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
+                        while self.current_state > 0 {
+                            self.current_state -= 1;
+                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                                break;
+                            }
+                        }
                     },
                     // Reload source code and try to enter current state again
                     KeyCode::Char('l') => {
-                        return Ok(ApplicationExitReason::Reload(self.debugger.current_frame));
+                        return Ok(ApplicationExitReason::Reload(self.current_state));
                     }
                     KeyCode::Char(other) => match other {
                         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {

@@ -18,11 +18,7 @@ pub struct Debugger {
     /// they are spread out so one is on each line.
     pub source_code: Vec<String>,
     /// Previously visited debugging states, inclding the current one.
-    ///
-    /// See `history_limit` for maximum debugging states stored.
-    /// We rotate them afterwards.
-    pub state_frames: Vec<DebuggingState>,
-    pub current_frame: usize,
+    state_frames: Vec<DebuggingState>,
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.
@@ -53,42 +49,25 @@ impl Debugger {
         Ok(Debugger {
             source_code: data.program_source,
             state_frames: states_shifted,
-            current_frame: 0,
         })
     }
-    pub fn current_state(&self) -> Option<DebuggingState> {
-        // TODO: Solve this without cloning. This is awful.
-        self.state_frames.get(self.current_frame).map(|s| s.clone())
+    /// Peek at state with target number (0-based).
+    /// 
+    /// This will return None if the state doesn't exist.
+    pub fn peek_at_state(&self, frame: usize) -> Option<&DebuggingState> {
+        self.state_frames.get(frame)
     }
-    /// Go to next sed execution step.
-    ///
-    /// This might return None if we reached end of execution.
-    pub fn next_state(&mut self) -> Option<DebuggingState> {
-        if self.current_frame >= self.state_frames.len() - 1 {
-            return None;
-        }
-        self.current_frame += 1;
-        // TODO: Solve this without cloning. This is awful.
-        self.state_frames.get(self.current_frame).map(|s| s.clone())
-    }
-    /// Go to previous sed execution step as saved in memory.
-    ///
-    /// This might return None if we are at start of execution or
-    /// if there no longer any states left in history.
-    pub fn previous_state(&mut self) -> Option<DebuggingState> {
-        if self.current_frame == 0 {
-            return None;
-        }
-        self.current_frame -= 1;
-        // TODO: Solve this without cloning. This is awful.
-        self.state_frames.get(self.current_frame).map(|s| s.clone())
+
+    /// Returns number of states. Counting starts from one.
+    pub fn count_of_states(&self) -> usize {
+        self.state_frames.len()
     }
 }
 
 /// One state of sed program execution.
 ///
 /// Remembers state of sed program execution.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct DebuggingState {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,

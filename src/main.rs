@@ -19,11 +19,8 @@ fn main() {
 /// state if possible
 fn run(target_state_number: usize) -> Result<()> {
     let settings = cli::parse_arguments()?;
-    let mut debugger = Debugger::new(settings)?;
-    for _ in 0..target_state_number {
-        debugger.next_state();
-    }
-    let tui = Tui::new(debugger)?;
+    let debugger = Debugger::new(settings)?;
+    let tui = Tui::new(&debugger, target_state_number)?;
     match tui.start()? {
         ApplicationExitReason::UserExit => {
             return Ok(());
