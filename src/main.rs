@@ -2,6 +2,7 @@ mod sed;
 use sed::debugger::Debugger;
 mod cli;
 mod ui;
+mod file_watcher;
 use anyhow::Result;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
