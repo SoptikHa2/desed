@@ -11,7 +11,6 @@ pub struct FileWatcher {
 }
 
 pub struct FileWatch {
-    pub has_events: bool,
     descriptor: inotify::WatchDescriptor,
 }
 
@@ -42,7 +41,6 @@ impl FileWatcher {
 
         let fw = FileWatch {
             descriptor: watch,
-            has_events: false,
         };
 
         self.watches.push(fw);
@@ -64,24 +62,13 @@ impl FileWatcher {
         ));
     }
 
-    pub fn read_events(&mut self) -> Result<bool> {
+    pub fn any_events(&mut self) -> Result<bool> {
         let mut buffer = [0; 1024];
         let events = match self.inotify.read_events(&mut buffer) {
             Result::Ok(ev) => ev,
             Result::Err(err) => return Result::Err(Error::from(err)),
         };
 
-        let mut has_matches = false;
-        for event in events {
-            for item in self.watches.iter_mut() {
-                if item.descriptor == event.wd {
-                    item.has_events = true;
-                    has_matches = true;
-                    break;
-                }
-            }
-        }
-
-        return Result::Ok(has_matches);
+        return Result::Ok(events.count() > 0);
     }
 }
