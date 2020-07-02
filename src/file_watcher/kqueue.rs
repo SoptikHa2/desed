@@ -1,46 +1,52 @@
+use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
 use std::vec::Vec;
 
-extern crate inotify;
-use inotify::Inotify;
+extern crate kqueue;
+use kqueue::Watcher as KQueue;
+
+const FILTER: kqueue::EventFilter = kqueue::EventFilter::EVFILT_VNODE;
 
 pub struct FileWatcherImpl {
-    inotify: Inotify,
+    kq: KQueue,
     watches: Vec<FileWatchImpl>
 }
 
 pub struct FileWatchImpl {
-    descriptor: inotify::WatchDescriptor,
+    file: File,
 }
 
 impl FileWatcherImpl {
-    pub fn init() -> Result<FileWatcherImpl>  {
-        let ino = match Inotify::init() {
-            Ok(i) => i,
+    pub fn init() -> Result<FileWatcherImpl> {
+        let kq = match KQueue::new() {
+            Ok(value) => value,
             Err(msg) => return Result::Err(msg),
         };
 
         return Result::Ok(FileWatcherImpl {
-            inotify: ino,
+            kq,
             watches: vec![]
         });
     }
 
     pub fn close(self) -> Result<()> {
-        return self.inotify.close();
+        // We don't do anything here since self.kq's destructor
+        // takes care of removing watches and closing files
+        return Result::Ok(());
     }
 
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
-        let mask: inotify::WatchMask = inotify::WatchMask::MODIFY;
+        let flags: kqueue::FilterFlag = kqueue::NOTE_WRITE | kqueue::NOTE_EXTEND;
 
-        let watch = match self.inotify.add_watch(file_path, mask) {
+        let file = File::open(file_path)?;
+        let _ = match self.kq.add_file(&file, FILTER, flags) {
             Ok(w) => w,
             Err(msg) => return Result::Err(msg),
         };
 
         let fw = FileWatchImpl {
-            descriptor: watch,
+            file
         };
 
         self.watches.push(fw);
@@ -50,9 +56,9 @@ impl FileWatcherImpl {
     pub fn rm_watch(&mut self, fw: &FileWatchImpl) -> Result<()> {
         for i in 0..self.watches.len() {
             let item_ref = self.watches.get(i).unwrap();
-            if item_ref.descriptor == fw.descriptor {
+            if item_ref as *const FileWatchImpl == fw as *const FileWatchImpl {
                 let item = self.watches.remove(i);
-                return self.inotify.rm_watch(item.descriptor);
+                return self.kq.remove_file(&item.file, FILTER);
             }
         }
 
@@ -63,16 +69,13 @@ impl FileWatcherImpl {
     }
 
     pub fn start(&mut self) -> Result<()> {
-        return Result::Ok(());
+        return self.kq.watch();
     }
 
     pub fn any_events(&mut self) -> Result<bool> {
-        let mut buffer = [0; 1024];
-        let events = match self.inotify.read_events(&mut buffer) {
-            Result::Ok(ev) => ev,
-            Result::Err(err) => return Result::Err(Error::from(err)),
-        };
-
-        return Result::Ok(events.count() > 0);
+        match self.kq.poll(None) {
+            Some(_) => return Result::Ok(true),
+            None => return Result::Ok(false),
+        }
     }
 }

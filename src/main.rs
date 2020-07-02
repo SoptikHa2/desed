@@ -21,8 +21,9 @@ fn main() {
 fn watch_files(settings: &Options) -> Result<FileWatcher> {
     let mut fw = FileWatcher::init()?;
 
-    fw.add_watch(&settings.sed_script);
-    fw.add_watch(&settings.input_file);
+    fw.add_watch(&settings.sed_script)?;
+    fw.add_watch(&settings.input_file)?;
+    fw.start()?;
 
     return Result::Ok(fw);
 }
