@@ -27,10 +27,6 @@ impl FileWatcherImpl {
         });
     }
 
-    pub fn close(self) -> Result<()> {
-        return self.inotify.close();
-    }
-
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
         let mask: inotify::WatchMask = inotify::WatchMask::MODIFY;
 

@@ -30,12 +30,6 @@ impl FileWatcherImpl {
         });
     }
 
-    pub fn close(self) -> Result<()> {
-        // We don't do anything here since self.kq's destructor
-        // takes care of removing watches and closing files
-        return Result::Ok(());
-    }
-
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
         let flags: kqueue::FilterFlag = kqueue::NOTE_WRITE | kqueue::NOTE_EXTEND;
 
