@@ -1,13 +1,17 @@
-#[cfg(target_os = "linux")]
-mod inotify;
-#[cfg(target_os = "linux")]
-pub type FileWatcher = crate::file_watcher::inotify::FileWatcherImpl;
-#[cfg(target_os = "linux")]
-pub type FileWatch = crate::file_watcher::inotify::FileWatchImpl;
+extern crate cfg_if;
 
-#[cfg(target_os = "freebsd")]
-mod kqueue;
-#[cfg(target_os = "freebsd")]
-pub type FileWatcher = crate::file_watcher::kqueue::FileWatcherImpl;
-#[cfg(target_os = "freebsd")]
-pub type FileWatch = crate::file_watcher::kqueue::FileWatchImpl;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "linux")] {
+        mod inotify;
+        pub type FileWatcher = crate::file_watcher::inotify::FileWatcherImpl;
+        pub type FileWatch = crate::file_watcher::inotify::FileWatchImpl;
+    } else if #[cfg(any(target_os="darwin", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))] {
+        mod kqueue;
+        pub type FileWatcher = crate::file_watcher::kqueue::FileWatcherImpl;
+        pub type FileWatch = crate::file_watcher::kqueue::FileWatchImpl;
+    } else {
+        mod mock;
+        pub type FileWatcher = crate::file_watcher::mock::FileWatcherImpl;
+        pub type FileWatch = crate::file_watcher::mock::FileWatchImpl;
+    }
+}
