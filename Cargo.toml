@@ -14,9 +14,7 @@ edition = "2018"
 
 [dependencies]
 # Parsing CLI arguments
-clap = "2.33.1"
-# Parsing output from sed
-logos = "0.11.4"
+clap = "2.33.0"
 # TUI
 crossterm = "0.17.4"
 tui = {  version = "0.9.4", default-features = false, features = ["crossterm"] }
