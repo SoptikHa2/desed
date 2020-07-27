@@ -83,3 +83,39 @@ impl SedAnnotationParser {
 
     }
 }
+
+#[cfg(test)]
+mod parser_tests {
+    use super::*;
+
+    #[test]
+    fn split_text_by_instructions() {
+        let input = "SED PROGRAM:\nabc\ndef\nghiINPUT:   WRONG_INPUT\nINPUT:   correct\ninput\nEND-OF-CYCLE:\nend";
+        let (before, instr, after) = SedAnnotationParser::get_text_until_next_instruction(&input).unwrap();
+        assert_eq!("", before, "Before should be empty, as literally the first thing in test string is instruction.");
+        assert_eq!(Some("SED PROGRAM:\n"), instr);
+        assert_eq!("abc\ndef\nghiINPUT:   WRONG_INPUT\nINPUT:   correct\ninput\nEND-OF-CYCLE:\nend", after);
+
+        let (before, instr, after) = SedAnnotationParser::get_text_until_next_instruction(&after).unwrap();
+        assert_eq!("\nabc\ndef\nghiINPUT:   WRONG_INPUT\n", before, "Before should contain string (with the most interesting part being ghiINPUT:     ) to test that
+        identifiers are only matched on newlines or string start. If it doesn't have the INPUT:     , then the annotation instruction was parsed as instruction
+        even if it was not on new line itself.");
+        assert_eq!(Some("INPUT:   "), instr);
+        assert_eq!("correct\ninput\nEND-OF-CYCLE:\nend", after);
+
+        let (before, instr, after) = SedAnnotationParser::get_text_until_next_instruction(&after).unwrap();
+        assert_eq!("correct\ninput\n", before);
+        assert_eq!(Some("END-OF-CYCLE:\n"), instr);
+        assert_eq!("end", after);
+
+        let (before, instr, after) = SedAnnotationParser::get_text_until_next_instruction(&after).unwrap();
+        assert_eq!("end", before);
+        assert_eq!(None, instr);
+        assert_eq!("", after);
+
+        let (before, instr, after) = SedAnnotationParser::get_text_until_next_instruction(&after).unwrap();
+        assert_eq!("", before);
+        assert_eq!(None, instr);
+        assert_eq!("", after);
+    }
+}
