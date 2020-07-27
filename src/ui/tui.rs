@@ -17,7 +17,7 @@ use tui::widgets::{Block, Borders, Paragraph, Text};
 use tui::Terminal;
 
 pub struct Tui<'a> {
-    debugger: &'a Debugger,
+    debugger: &'a Debugger<'a>,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
     /// Collection of lines which are designated as breakpoints
     breakpoints: HashSet<usize>,
@@ -141,7 +141,7 @@ impl<'a> Tui<'a> {
                 Tui::draw_text(
                     f,
                     String::from(" Output "),
-                    state.output.as_ref().map(|s| s.join("\n")).as_ref(),
+                    state.output,
                     output_plane,
                 );
             } else {
@@ -159,7 +159,7 @@ impl<'a> Tui<'a> {
     /// TODO: syntax highlighting
     fn draw_source_code<B: Backend>(
         f: &mut Frame<B>,
-        source_code: &Vec<String>,
+        source_code: &str,
         breakpoints: &HashSet<usize>,
         focused_line: usize,
         cursor: usize,
@@ -171,6 +171,7 @@ impl<'a> Tui<'a> {
             .title(" Source code ")
             .borders(Borders::ALL);
         let mut text_output: Vec<Text> = Vec::new();
+        let source_code_by_lines: Vec<&str> = source_code.lines().collect();
 
         // Scroll:
         // Focused line is line that should always be at the center of the screen.
@@ -214,7 +215,7 @@ impl<'a> Tui<'a> {
             draw_memory.current_startline = display_start;
         }
 
-        // Define closure that prints one more line of source code
+        // Define closure that prints one more line of source code.
         let mut add_new_line = |line_number| {
             // Define colors depending whether currently selected line has a breakpoint
             let linenr_color = if breakpoints.contains(&line_number) {
@@ -239,8 +240,8 @@ impl<'a> Tui<'a> {
                 linenr_format,
                 Style::default().fg(linenr_color).bg(linenr_bg_color),
             ));
-            if let Some(source) = source_code.get(line_number) {
-                text_output.push(Text::raw(source));
+            if let Some(source) = source_code_by_lines.get(line_number) {
+                text_output.push(Text::raw(*source));
             }
             text_output.push(Text::raw("\n"));
         };
@@ -288,7 +289,7 @@ impl<'a> Tui<'a> {
     fn draw_text<B: Backend>(
         f: &mut Frame<B>,
         heading: String,
-        text_to_write: Option<&String>,
+        text_to_write: Option<&str>,
         area: Rect,
     ) {
         let block = Block::default().title(&heading).borders(Borders::ALL);

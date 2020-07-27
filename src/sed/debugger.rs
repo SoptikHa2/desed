@@ -1,5 +1,5 @@
 use crate::cli::Options;
-use crate::sed::communication::DebugInfoFromSed;
+use crate::sed::parser::{SedAnnotation, SedAnnotationParser};
 use crate::sed::communication::SedCommunicator;
 use anyhow::Result;
 
@@ -11,27 +11,28 @@ use anyhow::Result;
 /// This will panic if something bad happens
 /// while executing sed, sed isn't the GNU version,
 /// or an invalid inner state (which should never happen) happens.
-pub struct Debugger {
+pub struct Debugger<'a> {
     /// Sed source code, one instruction per line.
     ///
     /// If there were multiple instructions on a single line in original source code,
     /// they are spread out so one is on each line.
-    pub source_code: Vec<String>,
+    pub source_code: &'a str,
     /// Previously visited debugging states, inclding the current one.
-    state_frames: Vec<DebuggingState>,
+    state_frames: Vec<DebuggingState<'a>>,
 }
-impl Debugger {
+
+impl<'a> Debugger<'a> {
     /// Create new instance of debugger and launch sed.
     pub fn new(settings: Options) -> Result<Self> {
         let mut communicator = SedCommunicator::new(settings);
-        let data: DebugInfoFromSed = communicator.get_execution_info_from_sed()?;
+        let data: SedAnnotation = SedAnnotationParser::parse_sed_debug_annotation(communicator.get_sed_output()?)?;
         // Shift all pattern matches one frame earlier.
         // The way it's done now (output appears one frame after it's source)
         // is, while the way sed works, very confusing.
         let mut states: Vec<DebuggingState> = data.states;
         states.reverse();
         let mut states_shifted: Vec<DebuggingState> = Vec::with_capacity(states.len());
-        let mut previous_output: Option<Vec<String>> = data.last_output;
+        let mut previous_output: Option<&str> = data.last_output;
         let mut previous_matches: Vec<String> = Vec::new();
         for state in states {
             states_shifted.push(DebuggingState {
@@ -68,7 +69,7 @@ impl Debugger {
 ///
 /// Remembers state of sed program execution.
 #[derive(Debug)]
-pub struct DebuggingState {
+pub struct DebuggingState<'a> {
     /// State of primary, or pattern, buffer
     pub pattern_buffer: String,
     /// State of secondary, or hold, buffer
@@ -78,7 +79,7 @@ pub struct DebuggingState {
     /// this will be empty.
     pub matched_regex_registers: Vec<String>,
     /// Output of sed command. Each vec item means one line.
-    pub output: Option<Vec<String>>,
+    pub output: Option<&'a str>,
     /// References current instruction in source code. This is computed heuristically
     /// and is not retrieved from inner sed state. So this might in some cases be wrong.
     /// If that's the case, file a bug.
