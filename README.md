@@ -106,3 +106,7 @@ I would like to introduce syntax highlighting and add this tool to standard repo
 ## Is this a joke?
 
 I thought it was. But apparently it's actually useful for some people.
+
+# Other projects
+
+- [video summarizer](https://github.com/soptikha2/video-summarizer), a tool and browser extensions that determines if people in video are currently talking or not, and speeds up the video accordingly. Great for long lecture videos for skipping time spent writing on a whiteboard.
