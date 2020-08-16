@@ -5,6 +5,7 @@ use std::vec::Vec;
 
 extern crate kqueue;
 use kqueue::Watcher as KQueue;
+use kqueue::FilterFlag as FilterFlag;
 
 const FILTER: kqueue::EventFilter = kqueue::EventFilter::EVFILT_VNODE;
 
@@ -31,7 +32,12 @@ impl FileWatcherImpl {
     }
 
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
-        let flags: kqueue::FilterFlag = kqueue::NOTE_WRITE | kqueue::NOTE_EXTEND;
+        let flags: FilterFlag =
+            FilterFlag::NOTE_WRITE |
+            FilterFlag::NOTE_EXTEND |
+            FilterFlag::NOTE_RENAME |
+            FilterFlag::NOTE_DELETE |
+            FilterFlag::NOTE_LINK;
 
         let file = File::open(file_path)?;
         let _ = match self.kq.add_file(&file, FILTER, flags) {

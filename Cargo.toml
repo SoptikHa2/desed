@@ -27,4 +27,4 @@ cfg-if = "0.1.10"
 inotify = "0.8.3" # Watch files and auto-reload on changes
 
 [target.'cfg(any(target_os="darwin", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))'.dependencies]
-kqueue = "0.2.3" # Watch files and auto-reload on changes
+kqueue = "1.0.1" # Watch files and auto-reload on changes
