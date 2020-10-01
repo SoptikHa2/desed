@@ -1,3 +1,4 @@
+use crate::file_watcher::FileWatcher;
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
@@ -19,6 +20,7 @@ use tui::Terminal;
 pub struct Tui<'a> {
     debugger: &'a Debugger,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    file_watcher: FileWatcher,
     /// Collection of lines which are designated as breakpoints
     breakpoints: HashSet<usize>,
     /// Remembers which line has user selected (has cursor on).
@@ -46,7 +48,7 @@ impl<'a> Tui<'a> {
     #[allow(unused_must_use)]
     // NOTE: We don't care that some actions here fail (for example mouse handling),
     // as some features that we're trying to enable here are not necessary for desed.
-    pub fn new(debugger: &'a Debugger, current_state: usize) -> Result<Self> {
+    pub fn new(debugger: &'a Debugger, file_watcher: FileWatcher, current_state: usize) -> Result<Self> {
         let mut stdout = io::stdout();
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
@@ -57,6 +59,7 @@ impl<'a> Tui<'a> {
         Ok(Tui {
             debugger,
             terminal,
+            file_watcher,
             breakpoints: HashSet::new(),
             cursor: 0,
             forced_refresh_rate: 200,
@@ -327,6 +330,7 @@ impl<'a> UiAgent for Tui<'a> {
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(self.forced_refresh_rate);
+        let mut file_watcher = self.file_watcher;
 
         // Thread that will send interrupt singals to UI thread (this one)
         thread::spawn(move || {
@@ -348,6 +352,11 @@ impl<'a> UiAgent for Tui<'a> {
                         if let Err(_) = tx.send(Interrupt::MouseEvent(mouse)) {
                             return;
                         }
+                    }
+                }
+                if file_watcher.any_events().ok().unwrap_or(false) {
+                    if let Err(_) = tx.send(Interrupt::FileChanged) {
+                        return;
                     }
                 }
                 if last_tick.elapsed() > tick_rate {
@@ -520,6 +529,9 @@ impl<'a> UiAgent for Tui<'a> {
                     }
                     _ => {}
                 },
+                Interrupt::FileChanged => {
+                    return Ok(ApplicationExitReason::Reload(self.current_state));
+                }
                 Interrupt::IntervalElapsed => {}
             }
             // Draw
@@ -549,6 +561,7 @@ impl<'a> UiAgent for Tui<'a> {
 enum Interrupt {
     KeyPressed(KeyEvent),
     MouseEvent(MouseEvent),
+    FileChanged,
     IntervalElapsed,
 }
 
