@@ -2,7 +2,7 @@ use crate::file_watcher::FileWatcher;
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
 use crossterm::execute;
 use std::cmp::{max, min};
 use std::collections::HashSet;
@@ -513,23 +513,23 @@ impl<'a> UiAgent for Tui<'a> {
                         self.pressed_keys_buffer.clear();
                     }
                 },
-                Interrupt::MouseEvent(event) => match event {
+                Interrupt::MouseEvent(event) => match event.kind {
                     // Button pressed, mark current line as breakpoint
-                    MouseEvent::Up(_button, _col, row, _key_modifiers) => {
-                        let target_breakpoint = (row - 1) as usize + draw_memory.current_startline;
+                    MouseEventKind::Up(_button) => {
+                        let target_breakpoint = (event.row - 1) as usize + draw_memory.current_startline;
                         if self.breakpoints.contains(&target_breakpoint) {
                             self.breakpoints.remove(&target_breakpoint);
                         } else {
                             self.breakpoints.insert(target_breakpoint);
                         }
                     }
-                    MouseEvent::ScrollUp(_col, _row, _key_modifiers) => {
+                    MouseEventKind::ScrollUp => {
                         if self.cursor > 0 {
                             self.cursor -= 1;
                         }
                         use_execution_pointer_as_focus_line = false;
                     }
-                    MouseEvent::ScrollDown(_col, _row, _key_modifiers) => {
+                    MouseEventKind::ScrollDown => {
                         if self.cursor < debugger.source_code.len() {
                             self.cursor += 1;
                         }
