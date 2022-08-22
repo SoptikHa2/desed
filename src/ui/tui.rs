@@ -310,17 +310,25 @@ impl<'a> Tui<'a> {
     #[allow(unused_must_use)]
     // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
     // but we try to restore as much as we can.
-    pub fn restore_terminal_state() -> Result<()> {
+    pub fn restore_terminal_state(clear_terminal: bool) -> Result<()> {
         let mut stdout = io::stdout();
+
         // Disable mouse control
         execute!(stdout, event::DisableMouseCapture);
-        // Disable raw mode that messes up with user's terminal and show cursor again
+
+        // Disable raw mode that messes up with user's terminal
         crossterm::terminal::disable_raw_mode();
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
+
+        // Show cursor again
         terminal.show_cursor();
-        // And clear as much as we can before handing the control of terminal back to user.
-        terminal.clear();
+
+        // Clear terminal if wanted
+        if clear_terminal {
+            // And clear as much as we can before handing the control of terminal back to user.
+            terminal.clear();
+        }
         Ok(())
     }
 }

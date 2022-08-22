@@ -10,10 +10,15 @@ use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
 
 fn main() {
+    // If an error occurs, we do not want to clear terminal, it's useful for the error to remain visible.
+    // But we want to clear terminal when user just exited GUI normally.
+    let mut clear_terminal: bool = true;
+
     if let Err(error) = run(0) {
         eprintln!("An error occured: {}", error);
+        clear_terminal = false;
     }
-    if let Err(error) = Tui::restore_terminal_state() {
+    if let Err(error) = Tui::restore_terminal_state(clear_terminal) {
         eprintln!("An error occured while attempting to reset terminal to previous state. Consider using 'reset' command. Error: {}", error);
     }
 }

@@ -19,7 +19,7 @@ clap = { version = "3.0.14", features = ["cargo"] }
 crossterm = "0.17.3"
 tui = {  version = "0.9.1", default-features = false, features = ["crossterm"] }
 # Flexible error handling
-anyhow = "1.0.31"
+anyhow = "1.0.62"
 # For easier handling of conditional compilation
 cfg-if = "0.1.10"
 
