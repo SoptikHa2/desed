@@ -17,7 +17,7 @@ edition = "2018"
 clap = { version = "3.0.14", features = ["cargo"] }
 # TUI
 crossterm = "0.25.0"
-tui = {  version = "0.9.1", default-features = false, features = ["crossterm"] }
+tui = {  version = "0.19.0", default-features = false, features = ["crossterm"] }
 # Flexible error handling
 anyhow = "1.0.62"
 # For easier handling of conditional compilation
