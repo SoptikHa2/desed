@@ -16,6 +16,10 @@ Some of the notable features include:
 
 ## Install
 
+### Alpine Linux
+
+`aports/testing/desed`
+
 ### Arch Linux
 
 Via AUR: [desed-git](https://aur.archlinux.org/packages/desed-git/) or [desed](https://aur.archlinux.org/packages/desed/) as stable version.
