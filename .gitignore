@@ -12,3 +12,6 @@ Cargo.lock
 # AUR package files - stored in AUR repository
 aur/desed
 aur/desed-git
+
+# Ignore IDEs
+.idea

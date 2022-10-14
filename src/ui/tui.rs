@@ -2,11 +2,11 @@ use crate::file_watcher::FileWatcher;
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
 use crossterm::execute;
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use std::io::{self, Write};
+use std::io;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,7 +14,8 @@ use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
-use tui::widgets::{Block, Borders, Paragraph, Text};
+use tui::text::{Text, Span, Spans};
+use tui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui::Terminal;
 
 pub struct Tui<'a> {
@@ -155,7 +156,7 @@ impl<'a> Tui<'a> {
         }
     }
 
-    /// Draw source code into main window.
+    /// Draw source code into main window.github.com/s2e/s2e
     ///
     /// Handles scrolling and breakpoint display as well.
     ///
@@ -173,7 +174,7 @@ impl<'a> Tui<'a> {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
-        let mut text_output: Vec<Text> = Vec::new();
+        let mut text_output: Vec<Spans> = Vec::new();
 
         // Scroll:
         // Focused line is line that should always be at the center of the screen.
@@ -238,23 +239,25 @@ impl<'a> Tui<'a> {
                 format!("{: <4}", (line_number + 1))
             };
             // Send the line we defined earlier to be displayed
-            text_output.push(Text::styled(
-                linenr_format,
-                Style::default().fg(linenr_color).bg(linenr_bg_color),
-            ));
-            if let Some(source) = source_code.get(line_number) {
-                text_output.push(Text::raw(source));
-            }
-            text_output.push(Text::raw("\n"));
+            text_output.push(Spans::from(vec![
+                Span::styled(
+                    linenr_format,
+                    Style::default().fg(linenr_color).bg(linenr_bg_color),
+                ),
+                if let Some(source) = source_code.get(line_number) {
+                    Span::raw(source)
+                } else { Span::raw("") }
+            ]));
+
         };
         for number in display_start..source_code.len() {
             add_new_line(number);
         }
         // Add one more "phantom" line so we see line where current segment execution ends
         add_new_line(source_code.len());
-        let paragraph = Paragraph::new(text_output.iter())
+        let paragraph = Paragraph::new(text_output)
             .block(block_source_code)
-            .wrap(true);
+            .wrap(Wrap { trim: false });
         f.render_widget(paragraph, area);
     }
 
@@ -264,26 +267,27 @@ impl<'a> Tui<'a> {
         let block_regex_space = Block::default()
             .title(" Regex matches ")
             .borders(Borders::ALL);
-        let mut text: Vec<Text> = Vec::new();
+        let mut text: Vec<Spans> = Vec::new();
         if regex_space.len() == 0 {
-            text.push(Text::styled(
+            text.push(Spans::from(vec![Span::styled(
                 "\nNo matches",
                 Style::default()
-                    .modifier(Modifier::ITALIC)
+                    .add_modifier(Modifier::ITALIC)
                     .fg(Color::DarkGray),
-            ));
+            )]));
         } else {
             for (i, m) in regex_space.iter().enumerate() {
-                text.push(Text::styled(
+                text.push(Spans::from(vec![
+                    Span::styled(
                     format!("\n\\{}    ", i),
-                    Style::default().fg(Color::DarkGray),
-                ));
-                text.push(Text::raw(m));
+                    Style::default().fg(Color::DarkGray)),
+                    Span::raw(m)
+                ]));
             }
         }
-        let paragraph = Paragraph::new(text.iter())
+        let paragraph = Paragraph::new(text)
             .block(block_regex_space)
-            .wrap(true);
+            .wrap(Wrap { trim: false });
         f.render_widget(paragraph, area);
     }
 
@@ -294,13 +298,13 @@ impl<'a> Tui<'a> {
         text_to_write: Option<&String>,
         area: Rect,
     ) {
-        let block = Block::default().title(&heading).borders(Borders::ALL);
+        let block = Block::default().title(heading).borders(Borders::ALL);
         let default_string = String::new();
-        let text = [Text::styled(
+        let text = [Span::styled(
             format!("\n{}", text_to_write.unwrap_or(&default_string)),
             Style::default().fg(Color::LightBlue),
         )];
-        let paragraph = Paragraph::new(text.iter()).block(block).wrap(true);
+        let paragraph = Paragraph::new(Spans::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
         f.render_widget(paragraph, area);
     }
 
@@ -310,17 +314,25 @@ impl<'a> Tui<'a> {
     #[allow(unused_must_use)]
     // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
     // but we try to restore as much as we can.
-    pub fn restore_terminal_state() -> Result<()> {
+    pub fn restore_terminal_state(clear_terminal: bool) -> Result<()> {
         let mut stdout = io::stdout();
+
         // Disable mouse control
         execute!(stdout, event::DisableMouseCapture);
-        // Disable raw mode that messes up with user's terminal and show cursor again
+
+        // Disable raw mode that messes up with user's terminal
         crossterm::terminal::disable_raw_mode();
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
+
+        // Show cursor again
         terminal.show_cursor();
-        // And clear as much as we can before handing the control of terminal back to user.
-        terminal.clear();
+
+        // Clear terminal if wanted
+        if clear_terminal {
+            // And clear as much as we can before handing the control of terminal back to user.
+            terminal.clear();
+        }
         Ok(())
     }
 }
@@ -505,23 +517,23 @@ impl<'a> UiAgent for Tui<'a> {
                         self.pressed_keys_buffer.clear();
                     }
                 },
-                Interrupt::MouseEvent(event) => match event {
+                Interrupt::MouseEvent(event) => match event.kind {
                     // Button pressed, mark current line as breakpoint
-                    MouseEvent::Up(_button, _col, row, _key_modifiers) => {
-                        let target_breakpoint = (row - 1) as usize + draw_memory.current_startline;
+                    MouseEventKind::Up(_button) => {
+                        let target_breakpoint = (event.row - 1) as usize + draw_memory.current_startline;
                         if self.breakpoints.contains(&target_breakpoint) {
                             self.breakpoints.remove(&target_breakpoint);
                         } else {
                             self.breakpoints.insert(target_breakpoint);
                         }
                     }
-                    MouseEvent::ScrollUp(_col, _row, _key_modifiers) => {
+                    MouseEventKind::ScrollUp => {
                         if self.cursor > 0 {
                             self.cursor -= 1;
                         }
                         use_execution_pointer_as_focus_line = false;
                     }
-                    MouseEvent::ScrollDown(_col, _row, _key_modifiers) => {
+                    MouseEventKind::ScrollDown => {
                         if self.cursor < debugger.source_code.len() {
                             self.cursor += 1;
                         }
@@ -552,7 +564,7 @@ impl<'a> UiAgent for Tui<'a> {
                     },
                     &mut draw_memory,
                 )
-            })?
+            })?;
         }
     }
 }
