@@ -16,7 +16,7 @@ edition = "2018"
 # Parsing CLI arguments
 clap = { version = "3.0.14", features = ["cargo"] }
 # TUI
-crossterm = "0.25.0"
+crossterm = "0.27.0"
 # Flexible error handling
 anyhow = "1.0.65"
 # For easier handling of conditional compilation

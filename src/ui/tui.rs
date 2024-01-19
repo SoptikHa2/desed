@@ -2,7 +2,7 @@ use crate::file_watcher::FileWatcher;
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, MouseEvent, MouseEventKind};
 use crossterm::execute;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -360,6 +360,10 @@ impl<'a> UiAgent for Tui<'a> {
                     // as we know there already something waiting for us (see event::poll)
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
+                        if key.kind != KeyEventKind::Press {
+                            // ignore release and repeat events
+                            continue;
+                        }
                         if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
                             return;
                         }
