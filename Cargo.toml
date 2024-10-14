@@ -26,5 +26,5 @@ cfg-if = "1.0.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.10.0" # Watch files and auto-reload on changes
 
-[target.'cfg(any(target_os="darwin", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))'.dependencies]
+[target.'cfg(any(target_os="macos", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))'.dependencies]
 kqueue = "1.0.6" # Watch files and auto-reload on changes
