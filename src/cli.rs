@@ -3,7 +3,7 @@ use clap::{crate_version, App, Arg, ArgMatches};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn parse_arguments<'a, 'b>() -> Result<Options> {
+pub fn parse_arguments() -> Result<Options> {
     let matches = App::new("Desed")
         .version(crate_version!())
         .author("Petr Šťastný <desed@soptik.tech>")
@@ -86,7 +86,7 @@ impl Options {
         let input_file: PathBuf = PathBuf::from_str(matches.value_of("input-file").unwrap())
             .with_context(|| "Failed to load input file path.")?;
 
-        let sed_path: Option<String> = matches.value_of("sed-path").map(|s| String::from(s));
+        let sed_path: Option<String> = matches.value_of("sed-path").map(String::from);
 
         let mut sed_parameters: Vec<String> = Vec::with_capacity(4);
         let mut debug = false;

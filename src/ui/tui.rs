@@ -14,7 +14,7 @@ use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
-use tui::text::{Text, Span, Spans};
+use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui::Terminal;
 
@@ -73,7 +73,7 @@ impl<'a> Tui<'a> {
     ///
     /// A default value will be return if the number is non-parsable (typically empty buffer) or is
     /// not at least 1.
-    fn get_pressed_key_buffer_as_number(buffer: &String, default_value: usize) -> usize {
+    fn get_pressed_key_buffer_as_number(buffer: &str, default_value: usize) -> usize {
         if let Ok(num) = buffer.parse() {
             if num >= 1 {
                 num
@@ -86,6 +86,7 @@ impl<'a> Tui<'a> {
     }
 
     /// Generate layout and call individual draw methods for each layout part.
+    #[allow(clippy::too_many_arguments)]
     fn draw_layout_and_subcomponents<B: Backend>(
         f: &mut Frame<B>,
         debugger: &Debugger,
@@ -161,9 +162,10 @@ impl<'a> Tui<'a> {
     /// Handles scrolling and breakpoint display as well.
     ///
     /// TODO: syntax highlighting
+    #[allow(clippy::too_many_arguments)]
     fn draw_source_code<B: Backend>(
         f: &mut Frame<B>,
-        source_code: &Vec<String>,
+        source_code: &[String],
         breakpoints: &HashSet<usize>,
         focused_line: usize,
         cursor: usize,
@@ -202,9 +204,7 @@ impl<'a> Tui<'a> {
             // Sometimes, towards end of file, maximum and minim viable lines have swapped values.
             // No idea why, but swapping them helps the problem.
             if minimum_viable_startline > maximum_viable_startline {
-                minimum_viable_startline ^= maximum_viable_startline;
-                maximum_viable_startline ^= minimum_viable_startline;
-                minimum_viable_startline ^= maximum_viable_startline;
+                std::mem::swap(&mut minimum_viable_startline, &mut maximum_viable_startline);
             }
             // Try to keep previous startline as it was, but scroll up or down as
             // little as possible to keep within bonds
@@ -263,12 +263,12 @@ impl<'a> Tui<'a> {
 
     /// Draw regex. This either prints "No matches" in dark gray, italics if there are no matches,
     /// or prints all the matches with their capture group number beforehand.
-    fn draw_regex_space<B: Backend>(f: &mut Frame<B>, regex_space: &Vec<String>, area: Rect) {
+    fn draw_regex_space<B: Backend>(f: &mut Frame<B>, regex_space: &[String], area: Rect) {
         let block_regex_space = Block::default()
             .title(" Regex matches ")
             .borders(Borders::ALL);
         let mut text: Vec<Spans> = Vec::new();
-        if regex_space.len() == 0 {
+        if regex_space.is_empty() {
             text.push(Spans::from(vec![Span::styled(
                 "\nNo matches",
                 Style::default()
@@ -357,22 +357,20 @@ impl<'a> UiAgent for Tui<'a> {
                     // as we know there already something waiting for us (see event::poll)
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
-                        if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
+                        if tx.send(Interrupt::KeyPressed(key)).is_err() {
                             return;
                         }
                     } else if let Event::Mouse(mouse) = event {
-                        if let Err(_) = tx.send(Interrupt::MouseEvent(mouse)) {
+                        if tx.send(Interrupt::MouseEvent(mouse)).is_err() {
                             return;
                         }
                     }
                 }
-                if file_watcher.any_events().ok().unwrap_or(false) {
-                    if let Err(_) = tx.send(Interrupt::FileChanged) {
-                        return;
-                    }
+                if file_watcher.any_events().ok().unwrap_or(false) && tx.send(Interrupt::FileChanged).is_err() {
+                    return;
                 }
                 if last_tick.elapsed() > tick_rate {
-                    if let Err(_) = tx.send(Interrupt::IntervalElapsed) {
+                    if tx.send(Interrupt::IntervalElapsed).is_err() {
                         return;
                     }
                     last_tick = Instant::now();
@@ -549,12 +547,12 @@ impl<'a> UiAgent for Tui<'a> {
             // Draw
             let breakpoints = &self.breakpoints;
             let cursor = self.cursor;
-            self.terminal.draw(|mut f| {
+            self.terminal.draw(|f| {
                 Tui::draw_layout_and_subcomponents(
-                    &mut f,
+                    f,
                     debugger,
-                    &current_state,
-                    &breakpoints,
+                    current_state,
+                    breakpoints,
                     cursor,
                     line_number,
                     if use_execution_pointer_as_focus_line {

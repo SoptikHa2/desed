@@ -21,16 +21,16 @@ impl FileWatcherImpl {
             Err(msg) => return Result::Err(msg),
         };
 
-        return Result::Ok(FileWatcherImpl {
+        Result::Ok(FileWatcherImpl {
             inotify: ino,
             watches: vec![]
-        });
+        })
     }
 
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
         let mask: inotify::WatchMask = inotify::WatchMask::MODIFY;
 
-        let watch = match self.inotify.add_watch(file_path, mask) {
+        let watch = match self.inotify.watches().add(file_path, mask) {
             Ok(w) => w,
             Err(msg) => return Result::Err(msg),
         };
@@ -40,7 +40,7 @@ impl FileWatcherImpl {
         };
 
         self.watches.push(fw);
-        return Result::Ok(&self.watches.last().unwrap());
+        return Result::Ok(self.watches.last().unwrap());
     }
 
     pub fn rm_watch(&mut self, fw: &FileWatchImpl) -> Result<()> {
@@ -48,27 +48,27 @@ impl FileWatcherImpl {
             let item_ref = self.watches.get(i).unwrap();
             if item_ref.descriptor == fw.descriptor {
                 let item = self.watches.remove(i);
-                return self.inotify.rm_watch(item.descriptor);
+                return self.inotify.watches().remove(item.descriptor);
             }
         }
 
-        return Result::Err(Error::new(
+        Result::Err(Error::new(
             ErrorKind::InvalidInput,
             "Passed FileWatch does not belong to this FileWatcher instance"
-        ));
+        ))
     }
 
     pub fn start(&mut self) -> Result<()> {
-        return Result::Ok(());
+        Result::Ok(())
     }
 
     pub fn any_events(&mut self) -> Result<bool> {
         let mut buffer = [0; 1024];
         let events = match self.inotify.read_events(&mut buffer) {
             Result::Ok(ev) => ev,
-            Result::Err(err) => return Result::Err(Error::from(err)),
+            Result::Err(err) => return Result::Err(err),
         };
 
-        return Result::Ok(events.count() > 0);
+        Result::Ok(events.count() > 0)
     }
 }

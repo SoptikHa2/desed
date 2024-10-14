@@ -30,7 +30,7 @@ fn watch_files(settings: &Options) -> Result<FileWatcher> {
     fw.add_watch(&settings.input_file)?;
     fw.start()?;
 
-    return Result::Ok(fw);
+    Result::Ok(fw)
 }
 
 /// Debug application and start at specified
@@ -42,10 +42,10 @@ fn run(target_state_number: usize) -> Result<()> {
     let tui = Tui::new(&debugger, watcher, target_state_number)?;
     match tui.start()? {
         ApplicationExitReason::UserExit => {
-            return Ok(());
+            Ok(())
         }
         ApplicationExitReason::Reload(instruction_number) => {
-            return run(instruction_number);
+            run(instruction_number)
         }
     }
 }
