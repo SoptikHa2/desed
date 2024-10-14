@@ -10,11 +10,11 @@ use std::io;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
-use tui::backend::{Backend, CrosstermBackend};
+use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::terminal::Frame;
-use tui::text::{Span, Spans};
+use tui::Frame;
+use tui::text::{Line, Span};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui::Terminal;
 
@@ -87,8 +87,8 @@ impl<'a> Tui<'a> {
 
     /// Generate layout and call individual draw methods for each layout part.
     #[allow(clippy::too_many_arguments)]
-    fn draw_layout_and_subcomponents<B: Backend>(
-        f: &mut Frame<B>,
+    fn draw_layout_and_subcomponents(
+        f: &mut Frame,
         debugger: &Debugger,
         state: &DebuggingState,
         breakpoints: &HashSet<usize>,
@@ -100,7 +100,7 @@ impl<'a> Tui<'a> {
         focused_line: usize,
         draw_memory: &mut DrawMemory,
     ) {
-        let total_size = f.size();
+        let total_size = f.area();
 
         if let [left_plane, right_plane] = Layout::default()
             .direction(Direction::Horizontal)
@@ -163,8 +163,8 @@ impl<'a> Tui<'a> {
     ///
     /// TODO: syntax highlighting
     #[allow(clippy::too_many_arguments)]
-    fn draw_source_code<B: Backend>(
-        f: &mut Frame<B>,
+    fn draw_source_code(
+        f: &mut Frame,
         source_code: &[String],
         breakpoints: &HashSet<usize>,
         focused_line: usize,
@@ -176,7 +176,7 @@ impl<'a> Tui<'a> {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
-        let mut text_output: Vec<Spans> = Vec::new();
+        let mut text_output: Vec<Line> = Vec::new();
 
         // Scroll:
         // Focused line is line that should always be at the center of the screen.
@@ -239,7 +239,7 @@ impl<'a> Tui<'a> {
                 format!("{: <4}", (line_number + 1))
             };
             // Send the line we defined earlier to be displayed
-            text_output.push(Spans::from(vec![
+            text_output.push(Line::from(vec![
                 Span::styled(
                     linenr_format,
                     Style::default().fg(linenr_color).bg(linenr_bg_color),
@@ -263,13 +263,13 @@ impl<'a> Tui<'a> {
 
     /// Draw regex. This either prints "No matches" in dark gray, italics if there are no matches,
     /// or prints all the matches with their capture group number beforehand.
-    fn draw_regex_space<B: Backend>(f: &mut Frame<B>, regex_space: &[String], area: Rect) {
+    fn draw_regex_space(f: &mut Frame, regex_space: &[String], area: Rect) {
         let block_regex_space = Block::default()
             .title(" Regex matches ")
             .borders(Borders::ALL);
-        let mut text: Vec<Spans> = Vec::new();
+        let mut text: Vec<Line> = Vec::new();
         if regex_space.is_empty() {
-            text.push(Spans::from(vec![Span::styled(
+            text.push(Line::from(vec![Span::styled(
                 "\nNo matches",
                 Style::default()
                     .add_modifier(Modifier::ITALIC)
@@ -277,7 +277,7 @@ impl<'a> Tui<'a> {
             )]));
         } else {
             for (i, m) in regex_space.iter().enumerate() {
-                text.push(Spans::from(vec![
+                text.push(Line::from(vec![
                     Span::styled(
                     format!("\n\\{}    ", i),
                     Style::default().fg(Color::DarkGray)),
@@ -292,8 +292,8 @@ impl<'a> Tui<'a> {
     }
 
     /// Draw simple text in area, wrapping, with light blue fg color. Do nothing else.
-    fn draw_text<B: Backend>(
-        f: &mut Frame<B>,
+    fn draw_text(
+        f: &mut Frame,
         heading: String,
         text_to_write: Option<&String>,
         area: Rect,
@@ -304,7 +304,7 @@ impl<'a> Tui<'a> {
             format!("\n{}", text_to_write.unwrap_or(&default_string)),
             Style::default().fg(Color::LightBlue),
         )];
-        let paragraph = Paragraph::new(Spans::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
+        let paragraph = Paragraph::new(Line::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
         f.render_widget(paragraph, area);
     }
 
