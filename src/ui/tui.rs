@@ -10,11 +10,11 @@ use std::io;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
-use tui::backend::{Backend, CrosstermBackend};
+use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::terminal::Frame;
-use tui::text::{Text, Span, Spans};
+use tui::Frame;
+use tui::text::{Line, Span};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui::Terminal;
 
@@ -73,7 +73,7 @@ impl<'a> Tui<'a> {
     ///
     /// A default value will be return if the number is non-parsable (typically empty buffer) or is
     /// not at least 1.
-    fn get_pressed_key_buffer_as_number(buffer: &String, default_value: usize) -> usize {
+    fn get_pressed_key_buffer_as_number(buffer: &str, default_value: usize) -> usize {
         if let Ok(num) = buffer.parse() {
             if num >= 1 {
                 num
@@ -86,8 +86,9 @@ impl<'a> Tui<'a> {
     }
 
     /// Generate layout and call individual draw methods for each layout part.
-    fn draw_layout_and_subcomponents<B: Backend>(
-        f: &mut Frame<B>,
+    #[allow(clippy::too_many_arguments)]
+    fn draw_layout_and_subcomponents(
+        f: &mut Frame,
         debugger: &Debugger,
         state: &DebuggingState,
         breakpoints: &HashSet<usize>,
@@ -99,7 +100,7 @@ impl<'a> Tui<'a> {
         focused_line: usize,
         draw_memory: &mut DrawMemory,
     ) {
-        let total_size = f.size();
+        let total_size = f.area();
 
         if let [left_plane, right_plane] = Layout::default()
             .direction(Direction::Horizontal)
@@ -161,9 +162,10 @@ impl<'a> Tui<'a> {
     /// Handles scrolling and breakpoint display as well.
     ///
     /// TODO: syntax highlighting
-    fn draw_source_code<B: Backend>(
-        f: &mut Frame<B>,
-        source_code: &Vec<String>,
+    #[allow(clippy::too_many_arguments)]
+    fn draw_source_code(
+        f: &mut Frame,
+        source_code: &[String],
         breakpoints: &HashSet<usize>,
         focused_line: usize,
         cursor: usize,
@@ -174,7 +176,7 @@ impl<'a> Tui<'a> {
         let block_source_code = Block::default()
             .title(" Source code ")
             .borders(Borders::ALL);
-        let mut text_output: Vec<Spans> = Vec::new();
+        let mut text_output: Vec<Line> = Vec::new();
 
         // Scroll:
         // Focused line is line that should always be at the center of the screen.
@@ -202,9 +204,7 @@ impl<'a> Tui<'a> {
             // Sometimes, towards end of file, maximum and minim viable lines have swapped values.
             // No idea why, but swapping them helps the problem.
             if minimum_viable_startline > maximum_viable_startline {
-                minimum_viable_startline ^= maximum_viable_startline;
-                maximum_viable_startline ^= minimum_viable_startline;
-                minimum_viable_startline ^= maximum_viable_startline;
+                std::mem::swap(&mut minimum_viable_startline, &mut maximum_viable_startline);
             }
             // Try to keep previous startline as it was, but scroll up or down as
             // little as possible to keep within bonds
@@ -239,7 +239,7 @@ impl<'a> Tui<'a> {
                 format!("{: <4}", (line_number + 1))
             };
             // Send the line we defined earlier to be displayed
-            text_output.push(Spans::from(vec![
+            text_output.push(Line::from(vec![
                 Span::styled(
                     linenr_format,
                     Style::default().fg(linenr_color).bg(linenr_bg_color),
@@ -263,13 +263,13 @@ impl<'a> Tui<'a> {
 
     /// Draw regex. This either prints "No matches" in dark gray, italics if there are no matches,
     /// or prints all the matches with their capture group number beforehand.
-    fn draw_regex_space<B: Backend>(f: &mut Frame<B>, regex_space: &Vec<String>, area: Rect) {
+    fn draw_regex_space(f: &mut Frame, regex_space: &[String], area: Rect) {
         let block_regex_space = Block::default()
             .title(" Regex matches ")
             .borders(Borders::ALL);
-        let mut text: Vec<Spans> = Vec::new();
-        if regex_space.len() == 0 {
-            text.push(Spans::from(vec![Span::styled(
+        let mut text: Vec<Line> = Vec::new();
+        if regex_space.is_empty() {
+            text.push(Line::from(vec![Span::styled(
                 "\nNo matches",
                 Style::default()
                     .add_modifier(Modifier::ITALIC)
@@ -277,7 +277,7 @@ impl<'a> Tui<'a> {
             )]));
         } else {
             for (i, m) in regex_space.iter().enumerate() {
-                text.push(Spans::from(vec![
+                text.push(Line::from(vec![
                     Span::styled(
                     format!("\n\\{}    ", i),
                     Style::default().fg(Color::DarkGray)),
@@ -292,8 +292,8 @@ impl<'a> Tui<'a> {
     }
 
     /// Draw simple text in area, wrapping, with light blue fg color. Do nothing else.
-    fn draw_text<B: Backend>(
-        f: &mut Frame<B>,
+    fn draw_text(
+        f: &mut Frame,
         heading: String,
         text_to_write: Option<&String>,
         area: Rect,
@@ -304,7 +304,7 @@ impl<'a> Tui<'a> {
             format!("\n{}", text_to_write.unwrap_or(&default_string)),
             Style::default().fg(Color::LightBlue),
         )];
-        let paragraph = Paragraph::new(Spans::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
+        let paragraph = Paragraph::new(Line::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
         f.render_widget(paragraph, area);
     }
 
@@ -357,22 +357,20 @@ impl<'a> UiAgent for Tui<'a> {
                     // as we know there already something waiting for us (see event::poll)
                     let event = event::read().unwrap();
                     if let Event::Key(key) = event {
-                        if let Err(_) = tx.send(Interrupt::KeyPressed(key)) {
+                        if tx.send(Interrupt::KeyPressed(key)).is_err() {
                             return;
                         }
                     } else if let Event::Mouse(mouse) = event {
-                        if let Err(_) = tx.send(Interrupt::MouseEvent(mouse)) {
+                        if tx.send(Interrupt::MouseEvent(mouse)).is_err() {
                             return;
                         }
                     }
                 }
-                if file_watcher.any_events().ok().unwrap_or(false) {
-                    if let Err(_) = tx.send(Interrupt::FileChanged) {
-                        return;
-                    }
+                if file_watcher.any_events().ok().unwrap_or(false) && tx.send(Interrupt::FileChanged).is_err() {
+                    return;
                 }
                 if last_tick.elapsed() > tick_rate {
-                    if let Err(_) = tx.send(Interrupt::IntervalElapsed) {
+                    if tx.send(Interrupt::IntervalElapsed).is_err() {
                         return;
                     }
                     last_tick = Instant::now();
@@ -549,12 +547,12 @@ impl<'a> UiAgent for Tui<'a> {
             // Draw
             let breakpoints = &self.breakpoints;
             let cursor = self.cursor;
-            self.terminal.draw(|mut f| {
+            self.terminal.draw(|f| {
                 Tui::draw_layout_and_subcomponents(
-                    &mut f,
+                    f,
                     debugger,
-                    &current_state,
-                    &breakpoints,
+                    current_state,
+                    breakpoints,
                     cursor,
                     line_number,
                     if use_execution_pointer_as_focus_line {

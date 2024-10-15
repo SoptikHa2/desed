@@ -1,54 +1,52 @@
 use anyhow::{Context, Result};
-use clap::{crate_version, App, Arg, ArgMatches};
+use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn parse_arguments<'a, 'b>() -> Result<Options> {
-    let matches = App::new("Desed")
+pub fn parse_arguments() -> Result<Options> {
+    let matches = Command::new("Desed")
         .version(crate_version!())
         .author("Petr Šťastný <desed@soptik.tech>")
         .about("Sed script debugger. Debug and demystify your sed scripts with TUI debugger.")
-        .arg(Arg::with_name("sed_n")
+        .arg(Arg::new("sed_n")
+            .action(ArgAction::SetTrue)
             .short('n')
             .long("quiet")
             .long("silent")
             .help("sed: suppress automatic printing of pattern space")
-            .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("sed_E")
+        .arg(Arg::new("sed_E")
+            .action(ArgAction::SetTrue)
             .short('E')
             .long("regexp-extended")
             .help("sed: use extended regular expressions in the script")
-            .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("sed_sandbox")
+        .arg(Arg::new("sed_sandbox")
+            .action(ArgAction::SetTrue)
             .long("sandbox")
             .help("sed: operate in sandbox mode (disable e/r/w commands).")
-            .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("sed_z")
+        .arg(Arg::new("sed_z")
+            .action(ArgAction::SetTrue)
             .long("null-data")
             .short('z')
             .help("sed: separate lines by NUL characters")
-            .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("verbose")
+        .arg(Arg::new("verbose")
+            .action(ArgAction::SetTrue)
             .long("verbose")
             .short('v')
             .help("This will enable various debug printing to stderr.")
-            .takes_value(false)
             .required(false))
-        .arg(Arg::with_name("sed-path")
+        .arg(Arg::new("sed-path")
             .long("sed-path")
             .help("Specify path to sed that should be used. If omitted, gsed/sed from your $PATH will run.")
-            .takes_value(true)
             .required(false))
-        .arg(Arg::with_name("sed-script")
+        .arg(Arg::new("sed-script")
             .help("Input file with sed script")
             .required(true)
-            .multiple(false)
             .index(1))
-        .arg(Arg::with_name("input-file")
+        .arg(Arg::new("input-file")
             .help("File with data for sed to process.")
             .required(true)
             .index(2))
@@ -80,30 +78,30 @@ pub struct Options {
 impl Options {
     pub fn from_matches(matches: ArgMatches) -> Result<Options> {
         // UNWRAP: It's safe because we define sed-script in the CLI code above, so we are certain it exists.
-        let sed_script: PathBuf = PathBuf::from_str(matches.value_of("sed-script").unwrap())
+        let sed_script: PathBuf = PathBuf::from_str(matches.get_one::<String>("sed-script").unwrap())
             .with_context(|| "Failed to load sed script path")?;
         // UNWRAP: It's safe because we define input-file in the CLI code above, so we are certain it exists.
-        let input_file: PathBuf = PathBuf::from_str(matches.value_of("input-file").unwrap())
+        let input_file: PathBuf = PathBuf::from_str(matches.get_one::<String>("input-file").unwrap())
             .with_context(|| "Failed to load input file path.")?;
 
-        let sed_path: Option<String> = matches.value_of("sed-path").map(|s| String::from(s));
+        let sed_path: Option<String> = matches.get_one::<String>("sed-path").map(ToOwned::to_owned);
 
         let mut sed_parameters: Vec<String> = Vec::with_capacity(4);
         let mut debug = false;
 
-        if matches.is_present("sed_n") {
+        if matches.get_flag("sed_n") {
             sed_parameters.push(String::from("-n"));
         }
-        if matches.is_present("sed_E") {
+        if matches.get_flag("sed_E") {
             sed_parameters.push(String::from("-E"));
         }
-        if matches.is_present("sed_sandbox") {
+        if matches.get_flag("sed_sandbox") {
             sed_parameters.push(String::from("--sandbox"));
         }
-        if matches.is_present("sed_z") {
+        if matches.get_flag("sed_z") {
             sed_parameters.push(String::from("-z"));
         }
-        if matches.is_present("verbose") {
+        if matches.get_flag("verbose") {
             debug = true;
         }
 

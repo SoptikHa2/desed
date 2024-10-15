@@ -14,10 +14,10 @@ edition = "2018"
 
 [dependencies]
 # Parsing CLI arguments
-clap = { version = "3.0.14", features = ["cargo"] }
+clap = { version = "4", features = ["cargo"] }
 # TUI
-crossterm = "0.25.0"
-tui = {  version = "0.19.0", default-features = false, features = ["crossterm"] }
+crossterm = "0.28.0"
+tui = { package = "ratatui", version = "0.28.0", default-features = false, features = ["crossterm"] }
 # Flexible error handling
 anyhow = "1.0.65"
 # For easier handling of conditional compilation
@@ -26,5 +26,5 @@ cfg-if = "1.0.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.10.0" # Watch files and auto-reload on changes
 
-[target.'cfg(any(target_os="darwin", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))'.dependencies]
+[target.'cfg(any(target_os="macos", target_os="dragonfly", target_os="freebsd", target_os="netbsd", target_os="openbsd"))'.dependencies]
 kqueue = "1.0.6" # Watch files and auto-reload on changes

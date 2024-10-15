@@ -18,11 +18,11 @@ impl SedCommunicator {
         let program_source = self.parse_program_source(&output);
         let label_jump_map = self.build_jump_map(&program_source);
         let frames = self.parse_state_frames(&output, &label_jump_map, program_source.len());
-        return Ok(DebugInfoFromSed {
+        Ok(DebugInfoFromSed {
             program_source,
             states: frames.0,
             last_output: frames.1,
-        });
+        })
     }
     fn get_sed_output(&mut self) -> Result<String> {
         let mut path_to_be_used: &String = &String::from("sed");
@@ -30,24 +30,22 @@ impl SedCommunicator {
             path_to_be_used = path;
         }
 
-        let mandatory_parameters = vec![
-            "--debug",
+        let mandatory_parameters = ["--debug",
             "-f",
             self.options
                 .sed_script
                 .to_str()
-                .with_context(|| format!("Invalid sed script path. Is it valid UTF-8?"))?,
+                .with_context(|| "Invalid sed script path. Is it valid UTF-8?".to_string())?,
             self.options
                 .input_file
                 .to_str()
-                .with_context(|| format!("Invalid input path. Is it valid UTF-8?"))?,
-        ];
+                .with_context(|| "Invalid input path. Is it valid UTF-8?".to_string())?];
         let constructed_cmd_line = self
             .options
             .sed_parameters
             .iter()
             .map(|s| s.as_str())
-            .chain(mandatory_parameters.iter().map(|s| *s))
+            .chain(mandatory_parameters.iter().copied())
             .collect::<Vec<&str>>();
         let sed_debug_command = Command::new(path_to_be_used)
             .args(&constructed_cmd_line)
@@ -58,7 +56,7 @@ impl SedCommunicator {
             .ok()
             .with_context(
                 || format!("Sed failed to return output. Shouldn't you use -E option? Are you using GNU sed? Is there sed/gsed in $PATH?{}" ,
-                    if  self.options.verbose{ format!("\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")) } else { format!("") }
+                    if  self.options.verbose{ format!("\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")) } else { String::new() }
             ))?
             .stdout;
 
@@ -74,7 +72,7 @@ impl SedCommunicator {
         // If sed returned no output (so it failed) and sed
         // path wasn't specified by user,
         // change executing path to "gsed" and try again.
-        if self.options.sed_path.is_none() && sed_debug_command.len() == 0 {
+        if self.options.sed_path.is_none() && sed_debug_command.is_empty() {
             self.options.sed_path = Some(String::from("gsed"));
             if self.options.verbose {
                 eprintln!(
@@ -85,7 +83,7 @@ impl SedCommunicator {
             return self.get_sed_output();
         }
 
-        Ok(String::from_utf8(sed_debug_command).with_context(|| "String received from sed doesn't seem to be UTF-8. If this continues to happen, please report a bug.")?)
+        String::from_utf8(sed_debug_command).with_context(|| "String received from sed doesn't seem to be UTF-8. If this continues to happen, please report a bug.")
     }
 
     /// Wait for line that looks like "SED PROGRAM:"
@@ -94,7 +92,7 @@ impl SedCommunicator {
     /// into output vector.
     ///
     /// When we meet a line that doesn't start with two spaces, stop reading and return.
-    fn parse_program_source(&self, sed_output: &String) -> Vec<String> {
+    fn parse_program_source(&self, sed_output: &str) -> Vec<String> {
         sed_output
             .lines()
             .skip_while(|line| *line != "SED PROGRAM:")
@@ -154,7 +152,7 @@ impl SedCommunicator {
     /// This returns individual frames *and* output of the last segement of the sed script.
     fn parse_state_frames(
         &self,
-        sed_output: &String,
+        sed_output: &str,
         label_jump_map: &HashMap<String, usize>,
         lines_of_code: usize,
     ) -> (Vec<DebuggingState>, Option<Vec<String>>) {
@@ -334,7 +332,7 @@ impl SedCommunicator {
             // Unconditional jump
             x if x.starts_with("b") => {
                 let rest = x[1..].trim();
-                if rest == "" {
+                if rest.is_empty() {
                     // Jump to end of script
                     lines_of_code
                 } else if let Some(target) = label_jump_map.get(rest) {
@@ -353,7 +351,7 @@ impl SedCommunicator {
                     || (x.starts_with("T") && !last_match_successful)
                 {
                     let rest = x[1..].trim();
-                    if rest == "" {
+                    if rest.is_empty() {
                         // jump to end of script
                         lines_of_code
                     } else if let Some(target) = label_jump_map.get(rest) {
@@ -375,7 +373,7 @@ impl SedCommunicator {
     }
 
     /// Build label jump map
-    fn build_jump_map(&self, source_code: &Vec<String>) -> HashMap<String, usize> {
+    fn build_jump_map(&self, source_code: &[String]) -> HashMap<String, usize> {
         let mut map: HashMap<String, usize> = HashMap::new();
         for (i, line) in source_code.iter().enumerate() {
             let trimmed = line.trim();
