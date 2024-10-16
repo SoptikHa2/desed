@@ -2,21 +2,21 @@ use crate::file_watcher::FileWatcher;
 use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
-use crossterm::execute;
+use ratatui::backend::CrosstermBackend;
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
+use ratatui::crossterm::execute;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::Frame;
+use ratatui::Terminal;
 use std::cmp::{max, min};
 use std::collections::HashSet;
 use std::io;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
-use tui::backend::CrosstermBackend;
-use tui::layout::{Constraint, Direction, Layout, Rect};
-use tui::style::{Color, Modifier, Style};
-use tui::Frame;
-use tui::text::{Line, Span};
-use tui::widgets::{Block, Borders, Paragraph, Wrap};
-use tui::Terminal;
 
 pub struct Tui<'a> {
     debugger: &'a Debugger,
@@ -49,13 +49,17 @@ impl<'a> Tui<'a> {
     #[allow(unused_must_use)]
     // NOTE: We don't care that some actions here fail (for example mouse handling),
     // as some features that we're trying to enable here are not necessary for desed.
-    pub fn new(debugger: &'a Debugger, file_watcher: FileWatcher, current_state: usize) -> Result<Self> {
+    pub fn new(
+        debugger: &'a Debugger,
+        file_watcher: FileWatcher,
+        current_state: usize,
+    ) -> Result<Self> {
         let mut stdout = io::stdout();
         execute!(stdout, event::EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)
             .with_context(|| "Failed to initialize terminal with crossterm backend.")?;
-        crossterm::terminal::enable_raw_mode()?;
+        ratatui::crossterm::terminal::enable_raw_mode()?;
         terminal.hide_cursor();
         Ok(Tui {
             debugger,
@@ -65,7 +69,7 @@ impl<'a> Tui<'a> {
             cursor: 0,
             forced_refresh_rate: 200,
             pressed_keys_buffer: String::new(),
-            current_state
+            current_state,
         })
     }
 
@@ -246,9 +250,10 @@ impl<'a> Tui<'a> {
                 ),
                 if let Some(source) = source_code.get(line_number) {
                     Span::raw(source)
-                } else { Span::raw("") }
+                } else {
+                    Span::raw("")
+                },
             ]));
-
         };
         for number in display_start..source_code.len() {
             add_new_line(number);
@@ -279,9 +284,10 @@ impl<'a> Tui<'a> {
             for (i, m) in regex_space.iter().enumerate() {
                 text.push(Line::from(vec![
                     Span::styled(
-                    format!("\n\\{}    ", i),
-                    Style::default().fg(Color::DarkGray)),
-                    Span::raw(m)
+                        format!("\n\\{}    ", i),
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::raw(m),
                 ]));
             }
         }
@@ -292,19 +298,16 @@ impl<'a> Tui<'a> {
     }
 
     /// Draw simple text in area, wrapping, with light blue fg color. Do nothing else.
-    fn draw_text(
-        f: &mut Frame,
-        heading: String,
-        text_to_write: Option<&String>,
-        area: Rect,
-    ) {
+    fn draw_text(f: &mut Frame, heading: String, text_to_write: Option<&String>, area: Rect) {
         let block = Block::default().title(heading).borders(Borders::ALL);
         let default_string = String::new();
         let text = [Span::styled(
             format!("\n{}", text_to_write.unwrap_or(&default_string)),
             Style::default().fg(Color::LightBlue),
         )];
-        let paragraph = Paragraph::new(Line::from(text.to_vec())).block(block).wrap(Wrap{ trim: false });
+        let paragraph = Paragraph::new(Line::from(text.to_vec()))
+            .block(block)
+            .wrap(Wrap { trim: false });
         f.render_widget(paragraph, area);
     }
 
@@ -321,7 +324,7 @@ impl<'a> Tui<'a> {
         execute!(stdout, event::DisableMouseCapture);
 
         // Disable raw mode that messes up with user's terminal
-        crossterm::terminal::disable_raw_mode();
+        ratatui::crossterm::terminal::disable_raw_mode();
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
@@ -366,7 +369,9 @@ impl<'a> UiAgent for Tui<'a> {
                         }
                     }
                 }
-                if file_watcher.any_events().ok().unwrap_or(false) && tx.send(Interrupt::FileChanged).is_err() {
+                if file_watcher.any_events().ok().unwrap_or(false)
+                    && tx.send(Interrupt::FileChanged).is_err()
+                {
                     return;
                 }
                 if last_tick.elapsed() > tick_rate {
@@ -482,22 +487,34 @@ impl<'a> UiAgent for Tui<'a> {
                         self.pressed_keys_buffer.clear();
                         while self.current_state < debugger.count_of_states() - 1 {
                             self.current_state += 1;
-                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                            if self.breakpoints.contains(
+                                &self
+                                    .debugger
+                                    .peek_at_state(self.current_state)
+                                    .unwrap()
+                                    .current_line,
+                            ) {
                                 break;
                             }
                         }
-                    },
+                    }
                     // Same as 'r', but backwards
                     KeyCode::Char('R') => {
                         use_execution_pointer_as_focus_line = true;
                         self.pressed_keys_buffer.clear();
                         while self.current_state > 0 {
                             self.current_state -= 1;
-                            if self.breakpoints.contains(&self.debugger.peek_at_state(self.current_state).unwrap().current_line) {
+                            if self.breakpoints.contains(
+                                &self
+                                    .debugger
+                                    .peek_at_state(self.current_state)
+                                    .unwrap()
+                                    .current_line,
+                            ) {
                                 break;
                             }
                         }
-                    },
+                    }
                     // Reload source code and try to enter current state again
                     KeyCode::Char('l') => {
                         return Ok(ApplicationExitReason::Reload(self.current_state));
@@ -518,7 +535,8 @@ impl<'a> UiAgent for Tui<'a> {
                 Interrupt::MouseEvent(event) => match event.kind {
                     // Button pressed, mark current line as breakpoint
                     MouseEventKind::Up(_button) => {
-                        let target_breakpoint = (event.row - 1) as usize + draw_memory.current_startline;
+                        let target_breakpoint =
+                            (event.row - 1) as usize + draw_memory.current_startline;
                         if self.breakpoints.contains(&target_breakpoint) {
                             self.breakpoints.remove(&target_breakpoint);
                         } else {
