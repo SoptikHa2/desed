@@ -7,7 +7,7 @@ use inotify::Inotify;
 
 pub struct FileWatcherImpl {
     inotify: Inotify,
-    watches: Vec<FileWatchImpl>
+    watches: Vec<FileWatchImpl>,
 }
 
 pub struct FileWatchImpl {
@@ -15,7 +15,7 @@ pub struct FileWatchImpl {
 }
 
 impl FileWatcherImpl {
-    pub fn init() -> Result<FileWatcherImpl>  {
+    pub fn init() -> Result<FileWatcherImpl> {
         let ino = match Inotify::init() {
             Ok(i) => i,
             Err(msg) => return Result::Err(msg),
@@ -23,7 +23,7 @@ impl FileWatcherImpl {
 
         Result::Ok(FileWatcherImpl {
             inotify: ino,
-            watches: vec![]
+            watches: vec![],
         })
     }
 
@@ -35,9 +35,7 @@ impl FileWatcherImpl {
             Err(msg) => return Result::Err(msg),
         };
 
-        let fw = FileWatchImpl {
-            descriptor: watch,
-        };
+        let fw = FileWatchImpl { descriptor: watch };
 
         self.watches.push(fw);
         return Result::Ok(self.watches.last().unwrap());
@@ -54,7 +52,7 @@ impl FileWatcherImpl {
 
         Result::Err(Error::new(
             ErrorKind::InvalidInput,
-            "Passed FileWatch does not belong to this FileWatcher instance"
+            "Passed FileWatch does not belong to this FileWatcher instance",
         ))
     }
 

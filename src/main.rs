@@ -2,10 +2,10 @@ mod sed;
 use sed::debugger::Debugger;
 mod cli;
 use cli::Options;
-mod ui;
 mod file_watcher;
-use file_watcher::FileWatcher;
+mod ui;
 use anyhow::Result;
+use file_watcher::FileWatcher;
 use ui::generic::{ApplicationExitReason, UiAgent};
 use ui::tui::Tui;
 
@@ -41,11 +41,7 @@ fn run(target_state_number: usize) -> Result<()> {
     let debugger = Debugger::new(settings)?;
     let tui = Tui::new(&debugger, watcher, target_state_number)?;
     match tui.start()? {
-        ApplicationExitReason::UserExit => {
-            Ok(())
-        }
-        ApplicationExitReason::Reload(instruction_number) => {
-            run(instruction_number)
-        }
+        ApplicationExitReason::UserExit => Ok(()),
+        ApplicationExitReason::Reload(instruction_number) => run(instruction_number),
     }
 }

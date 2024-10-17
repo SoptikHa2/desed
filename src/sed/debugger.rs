@@ -52,7 +52,7 @@ impl Debugger {
         })
     }
     /// Peek at state with target number (0-based).
-    /// 
+    ///
     /// This will return None if the state doesn't exist.
     pub fn peek_at_state(&self, frame: usize) -> Option<&DebuggingState> {
         self.state_frames.get(frame)
