@@ -30,7 +30,8 @@ impl SedCommunicator {
             path_to_be_used = path;
         }
 
-        let mandatory_parameters = ["--debug",
+        let mandatory_parameters = [
+            "--debug",
             "-f",
             self.options
                 .sed_script
@@ -39,7 +40,8 @@ impl SedCommunicator {
             self.options
                 .input_file
                 .to_str()
-                .with_context(|| "Invalid input path. Is it valid UTF-8?".to_string())?];
+                .with_context(|| "Invalid input path. Is it valid UTF-8?".to_string())?,
+        ];
         let constructed_cmd_line = self
             .options
             .sed_parameters

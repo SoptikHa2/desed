@@ -4,7 +4,7 @@ use std::vec::Vec;
 
 pub struct FileWatcherImpl {
     highest_id: usize,
-    watches: Vec<FileWatchImpl>
+    watches: Vec<FileWatchImpl>,
 }
 
 pub struct FileWatchImpl {
@@ -12,10 +12,10 @@ pub struct FileWatchImpl {
 }
 
 impl FileWatcherImpl {
-    pub fn init() -> Result<FileWatcherImpl>  {
+    pub fn init() -> Result<FileWatcherImpl> {
         return Result::Ok(FileWatcherImpl {
             highest_id: 0,
-            watches: vec![]
+            watches: vec![],
         });
     }
 
@@ -41,7 +41,7 @@ impl FileWatcherImpl {
 
         return Result::Err(Error::new(
             ErrorKind::InvalidInput,
-            "Passed FileWatch does not belong to this FileWatcher instance"
+            "Passed FileWatch does not belong to this FileWatcher instance",
         ));
     }
 
