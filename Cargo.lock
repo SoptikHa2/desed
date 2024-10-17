@@ -211,7 +211,6 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "clap",
- "crossterm",
  "inotify",
  "kqueue",
  "ratatui",

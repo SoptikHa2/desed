@@ -16,8 +16,7 @@ edition = "2018"
 # Parsing CLI arguments
 clap = { version = "4", features = ["cargo"] }
 # TUI
-crossterm = "0.28.0"
-tui = { package = "ratatui", version = "0.28.0", default-features = false, features = ["crossterm"] }
+ratatui = "0.28.1"
 # Flexible error handling
 anyhow = "1.0.65"
 # For easier handling of conditional compilation
