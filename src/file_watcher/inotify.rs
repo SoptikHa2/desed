@@ -16,10 +16,7 @@ pub struct FileWatchImpl {
 
 impl FileWatcherImpl {
     pub fn init() -> Result<FileWatcherImpl> {
-        let ino = match Inotify::init() {
-            Ok(i) => i,
-            Err(msg) => return Result::Err(msg),
-        };
+        let ino = Inotify::init()?;
 
         Result::Ok(FileWatcherImpl {
             inotify: ino,
@@ -30,15 +27,11 @@ impl FileWatcherImpl {
     pub fn add_watch(&mut self, file_path: &PathBuf) -> Result<&FileWatchImpl> {
         let mask: inotify::WatchMask = inotify::WatchMask::MODIFY;
 
-        let watch = match self.inotify.watches().add(file_path, mask) {
-            Ok(w) => w,
-            Err(msg) => return Result::Err(msg),
-        };
-
+        let watch = self.inotify.watches().add(file_path, mask)?;
         let fw = FileWatchImpl { descriptor: watch };
 
         self.watches.push(fw);
-        return Result::Ok(self.watches.last().unwrap());
+        Result::Ok(self.watches.last().unwrap())
     }
 
     pub fn rm_watch(&mut self, fw: &FileWatchImpl) -> Result<()> {
@@ -62,10 +55,7 @@ impl FileWatcherImpl {
 
     pub fn any_events(&mut self) -> Result<bool> {
         let mut buffer = [0; 1024];
-        let events = match self.inotify.read_events(&mut buffer) {
-            Result::Ok(ev) => ev,
-            Result::Err(err) => return Result::Err(err),
-        };
+        let events = self.inotify.read_events(&mut buffer)?;
 
         Result::Ok(events.count() > 0)
     }
