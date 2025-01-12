@@ -340,7 +340,7 @@ impl<'a> Tui<'a> {
     }
 }
 
-impl<'a> UiAgent for Tui<'a> {
+impl UiAgent for Tui<'_> {
     fn start(mut self) -> Result<ApplicationExitReason> {
         // Setup event loop and input handling
         let (tx, rx) = mpsc::channel();
