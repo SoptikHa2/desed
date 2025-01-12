@@ -20,10 +20,7 @@ pub struct FileWatchImpl {
 
 impl FileWatcherImpl {
     pub fn init() -> Result<FileWatcherImpl> {
-        let kq = match KQueue::new() {
-            Ok(value) => value,
-            Err(msg) => return Result::Err(msg),
-        };
+        let kq = KQueue::new()?;
 
         Ok(FileWatcherImpl {
             kq,
