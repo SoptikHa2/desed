@@ -86,7 +86,7 @@ Runtime: `sed` (GNU version, >= 4.6) (desed works on BSD if you installed `gsed`
 # FAQ
 
 ## How does it work?
-GNU sed actually provides pretty useful debugging interface, try it yourself with `--debug` flag. However the interface is not interactive and I wanted something closer to traditional debugger. [I've written something here](https://soptik.tech/articles/building-desed-the-sed-debugger.html).
+GNU sed actually provides pretty useful debugging interface, try it yourself with `--debug` flag. However the interface is not interactive and I wanted something closer to traditional debugger.
 
 ## Does it really work?
 Depends. Sed actually doesn't tell me which line number is it currently executing, so I have to emulate parts of sed to guess that. Which might not be bulletproof. But it certainly worked good enough to debug tetris without issues.
@@ -103,14 +103,11 @@ I wanted to program in sed but it lacked good tooling up to this point, so I had
 
 Because it's the standard stream editor for filtering and transforming text. And someone wrote [tetris](https://github.com/uuner/sedtris) in it!
 
-## What is the roadmap for future updates?
-
-I would like to introduce syntax highlighting and add this tool to standard repositories of all major distributions.
-
 ## Is this a joke?
 
 I thought it was. But apparently it's actually useful for some people.
 
-# Other projects
+# What people say about desed
 
-- [video summarizer](https://github.com/soptikha2/video-summarizer), a tool and browser extensions that determines if people in video are currently talking or not, and speeds up the video accordingly. Great for long lecture videos for skipping time spent writing on a whiteboard.
+> Amusingly, in French, "desed" sounds like "décéde", which means die / decease. That's quite a fitting name for a tool one would use in "I need to debug a sed script" situations!
+- [mlegendre](https://news.ycombinator.com/item?id=41455667)
