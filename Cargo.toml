@@ -16,7 +16,7 @@ edition = "2018"
 # Parsing CLI arguments
 clap = { version = "4", features = ["cargo"] }
 # TUI
-ratatui = "0.28.1"
+ratatui = "0.29"
 # Flexible error handling
 anyhow = "1.0.65"
 # For easier handling of conditional compilation
