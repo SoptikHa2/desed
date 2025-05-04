@@ -15,11 +15,11 @@ fn main() {
     let mut clear_terminal: bool = true;
 
     if let Err(error) = run(0) {
-        eprintln!("An error occured: {}", error);
+        eprintln!("An error occurred: {}", error);
         clear_terminal = false;
     }
     if let Err(error) = Tui::restore_terminal_state(clear_terminal) {
-        eprintln!("An error occured while attempting to reset terminal to previous state. Consider using 'reset' command. Error: {}", error);
+        eprintln!("An error occurred while attempting to reset terminal to previous state. Consider using 'reset' command. Error: {}", error);
     }
 }
 

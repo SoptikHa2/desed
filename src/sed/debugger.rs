@@ -17,7 +17,7 @@ pub struct Debugger {
     /// If there were multiple instructions on a single line in original source code,
     /// they are spread out so one is on each line.
     pub source_code: Vec<String>,
-    /// Previously visited debugging states, inclding the current one.
+    /// Previously visited debugging states, including the current one.
     state_frames: Vec<DebuggingState>,
 }
 impl Debugger {
@@ -74,7 +74,7 @@ pub struct DebuggingState {
     /// State of secondary, or hold, buffer
     pub hold_buffer: String,
     /// If any regex was matched within the last execution step, the capture groups
-    /// wil be saved here. If the previously executed instruction was not a substitution,
+    /// will be saved here. If the previously executed instruction was not a substitution,
     /// this will be empty.
     pub matched_regex_registers: Vec<String>,
     /// Output of sed command. Each vec item means one line.
@@ -85,6 +85,6 @@ pub struct DebuggingState {
     pub current_line: usize,
     /// Command executed by sed. With a bit of luck, this should match command referenced
     /// by current_line. If these two don't match, this one (`sed_command`) is right and
-    /// a bug in parsing code occured.
+    /// a bug in parsing code occurred.
     pub sed_command: Option<String>,
 }

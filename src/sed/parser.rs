@@ -12,7 +12,7 @@ use logos::{Lexer, Logos};
 /// ```
 /// There might be multiple commands within one input line. The example continues:
 /// ```sh
-/// COMMNAD: =
+/// COMMAND: =
 /// 1
 /// ```
 /// That was it, that was whole command. Notice the output of the command.
@@ -22,7 +22,7 @@ use logos::{Lexer, Logos};
 /// COMMAND: d
 /// END-OF-CYCLE
 /// ```
-/// And another segment begins. Note that we don't differentiate within segments inside the result iself,
+/// And another segment begins. Note that we don't differentiate within segments inside the result itself,
 /// but we need to during parsing.
 /// ```sh
 /// INPUT:    'input.txt' line 2

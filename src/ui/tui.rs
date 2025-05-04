@@ -347,7 +347,7 @@ impl UiAgent for Tui<'_> {
         let tick_rate = Duration::from_millis(self.forced_refresh_rate);
         let mut file_watcher = self.file_watcher;
 
-        // Thread that will send interrupt singals to UI thread (this one)
+        // Thread that will send interrupt signals to UI thread (this one)
         thread::spawn(move || {
             let mut last_tick = Instant::now();
             loop {
