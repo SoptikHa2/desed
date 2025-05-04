@@ -79,7 +79,7 @@ impl SedCommunicator {
             if self.options.verbose {
                 eprintln!(
                         "[Info] Sed failed and didn't return any output. As sed path wasn't specified, trying again with \"gsed\". If even that won't work, make sure \
-                                sed is able to process your script. Most common mistake is forgeting to use -E."
+                                sed is able to process your script. Most common mistake is forgetting to use -E."
                     );
             }
             return self.get_sed_output();
@@ -115,7 +115,7 @@ impl SedCommunicator {
     /// ```
     /// There might be multiple commands within one input line. The example continues:
     /// ```sh
-    /// COMMNAD: =
+    /// COMMAND: =
     /// 1
     /// ```
     /// That was it, that was whole command. Notice the output of the command.
@@ -125,7 +125,7 @@ impl SedCommunicator {
     /// COMMAND: d
     /// END-OF-CYCLE
     /// ```
-    /// And another segment begins. Note that we don't differentiate within segments inside the result iself,
+    /// And another segment begins. Note that we don't differentiate within segments inside the result itself,
     /// but we need to during parsing.
     /// ```sh
     /// INPUT:    'input.txt' line 2
@@ -151,7 +151,7 @@ impl SedCommunicator {
     /// hello           # Value printed to stdout. This tends to come after COMMAND or END-OF-CYCLE.
     /// ```
     ///
-    /// This returns individual frames *and* output of the last segement of the sed script.
+    /// This returns individual frames *and* output of the last segment of the sed script.
     fn parse_state_frames(
         &self,
         sed_output: &str,
@@ -231,7 +231,7 @@ impl SedCommunicator {
                 continue;
             }
             match line {
-                // Do not record INPUT lines, but reset line number, previous command and patern space.
+                // Do not record INPUT lines, but reset line number, previous command and pattern space.
                 x if x.starts_with("INPUT:") => {
                     sed_line = 0;
                     current_pattern = "";
@@ -346,8 +346,8 @@ impl SedCommunicator {
                 }
             }
             // Conditional jump
-            // Jump only if last substition was succesful
-            // (or, in case of T, only if the last substituion was not succesful)
+            // Jump only if last substitution was successful
+            // (or, in case of T, only if the last substitution was not successful)
             x if x.starts_with("t") | x.starts_with("T") => {
                 if (x.starts_with("t") && last_match_successful)
                     || (x.starts_with("T") && !last_match_successful)
