@@ -36,12 +36,18 @@ fn watch_files(settings: &Options) -> Result<FileWatcher> {
 /// Debug application and start at specified
 /// state if possible
 fn run(target_state_number: usize) -> Result<()> {
-    let settings = cli::parse_arguments()?;
-    let watcher = watch_files(&settings)?;
-    let debugger = Debugger::new(settings)?;
-    let tui = Tui::new(&debugger, watcher, target_state_number)?;
-    match tui.start()? {
-        ApplicationExitReason::UserExit => Ok(()),
-        ApplicationExitReason::Reload(instruction_number) => run(instruction_number),
+    let mut current_state_number = target_state_number;
+    loop {
+        let settings = cli::parse_arguments()?;
+        let watcher = watch_files(&settings)?;
+        let debugger = Debugger::new(settings)?;
+        let tui = Tui::new(&debugger, watcher, current_state_number)?;
+        match tui.start()? {
+            ApplicationExitReason::UserExit => return Ok(()),
+            ApplicationExitReason::Reload(instruction_number) => {
+                current_state_number = instruction_number;
+                // Continue loop to reload
+            }
+        }
     }
 }
