@@ -22,7 +22,7 @@ pub struct Debugger {
 }
 impl Debugger {
     /// Create new instance of debugger and launch sed.
-    pub fn new(settings: Options) -> Result<Self> {
+    pub fn run_from(settings: Options) -> Result<Self> {
         let mut communicator = SedCommunicator::new(settings);
         let data: DebugInfoFromSed = communicator.get_execution_info_from_sed()?;
         // Shift all pattern matches one frame earlier.
