@@ -57,7 +57,7 @@ impl SedCommunicator {
             .output()
             .ok()
             .with_context(
-                || format!("Sed failed to return output. Shouldn't you use -E option? Are you using GNU sed? Is there sed/gsed in $PATH?{}" ,
+                || format!("Sed failed to return output. Shouldn't you use the -E option? Are you using GNU sed? Is there sed (or gsed, commonly on mac) in $PATH?{}" ,
                     if  self.options.verbose{ format!("\n[Info] Sed was called using \"{} {}\"", &path_to_be_used, constructed_cmd_line.join(" ")) } else { String::new() }
             ))?
             .stdout;
