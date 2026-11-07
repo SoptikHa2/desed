@@ -3,8 +3,8 @@ use crate::sed::debugger::{Debugger, DebuggingState};
 use crate::ui::generic::{ApplicationExitReason, UiAgent};
 use anyhow::{Context, Result};
 use ratatui::backend::CrosstermBackend;
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
-use ratatui::crossterm::execute;
+use ratatui::crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, MouseEvent, MouseEventKind};
+use ratatui::crossterm::ExecutableCommand;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -17,6 +17,7 @@ use std::io;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
+use ratatui::crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 
 pub struct Tui<'a> {
     debugger: &'a Debugger,
@@ -55,7 +56,8 @@ impl<'a> Tui<'a> {
         current_state: usize,
     ) -> Result<Self> {
         let mut stdout = io::stdout();
-        execute!(stdout, event::EnableMouseCapture);
+        stdout.execute(EnterAlternateScreen);
+        stdout.execute(EnableMouseCapture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)
             .with_context(|| "Failed to initialize terminal with crossterm backend.")?;
@@ -317,11 +319,12 @@ impl<'a> Tui<'a> {
     #[allow(unused_must_use)]
     // NOTE: We don't care if we fail to do something here. Terminal might not support everything,
     // but we try to restore as much as we can.
-    pub fn restore_terminal_state(clear_terminal: bool) -> Result<()> {
+    pub fn restore_terminal_state() -> Result<()> {
         let mut stdout = io::stdout();
 
-        // Disable mouse control
-        execute!(stdout, event::DisableMouseCapture);
+        // Disable mouse control, and return to the original screen
+        stdout.execute(DisableMouseCapture);
+        stdout.execute(LeaveAlternateScreen);
 
         // Disable raw mode that messes up with user's terminal
         ratatui::crossterm::terminal::disable_raw_mode();
@@ -330,12 +333,6 @@ impl<'a> Tui<'a> {
 
         // Show cursor again
         terminal.show_cursor();
-
-        // Clear terminal if wanted
-        if clear_terminal {
-            // And clear as much as we can before handing the control of terminal back to user.
-            terminal.clear();
-        }
         Ok(())
     }
 }
